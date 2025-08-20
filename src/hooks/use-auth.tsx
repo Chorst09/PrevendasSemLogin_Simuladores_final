@@ -1,30 +1,90 @@
-// src/hooks/use-auth.tsx
 "use client";
 
-import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { JWTPayload } from '@/lib/auth'; // Reutilizando a interface do backend
 
-// Importações e inicialização do Firebase Auth removidas
-// import { getAuth, ... } from "firebase/auth";
-// const app = getFirebaseApp();
-// const auth = app ? getAuth(app) : null;
+interface AuthContextType {
+  user: JWTPayload | null;
+  token: string | null;
+  login: (token: string) => void;
+  logout: () => void;
+  isLoading: boolean;
+}
 
-// Importações relacionadas ao Firestore podem ser mantidas se ainda usadas para outros propósitos
-import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
-import { getFirebaseApp } from "@/lib/firebase";
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Definição do tipo AuthContextType e contexto removidos ou modificados
-// interface AuthContextType { ... }
-// const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Função para decodificar o token (simplificada, sem verificação de assinatura)
+const decodeToken = (token: string): JWTPayload | null => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload as JWTPayload;
+  } catch (error) {
+    console.error("Failed to decode token:", error);
+    return null;
+  }
+};
 
-// AuthProvider e hook useAuth removidos ou modificados
-// export const AuthProvider = ({ children }: { children: ReactNode }) => { ... };
-// export const useAuth = () => { ... };
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<JWTPayload | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
-// Conteúdo do arquivo após a remoção do código de autenticação:
-// Dependendo de como o restante do aplicativo usa este hook, pode ser necessário
-// fornecer um hook dummy ou remover as chamadas para useAuth em outros lugares.
-// Por enquanto, o arquivo estará quase vazio ou conterá apenas imports não relacionados à auth.
+  useEffect(() => {
+    let storedToken = localStorage.getItem('auth-token');
+    
+    // If no token in localStorage, check cookies
+    if (!storedToken) {
+      const cookies = document.cookie.split(';');
+      const authCookie = cookies.find(cookie => cookie.trim().startsWith('auth-token='));
+      if (authCookie) {
+        storedToken = authCookie.split('=')[1];
+        // Sync back to localStorage
+        localStorage.setItem('auth-token', storedToken);
+      }
+    }
+    
+    if (storedToken) {
+      const decodedUser = decodeToken(storedToken);
+      if (decodedUser) {
+        setUser(decodedUser);
+        setToken(storedToken);
+      }
+    }
+    setIsLoading(false);
+  }, []);
 
-// Removendo completamente o conteúdo relacionado à autenticação e deixando o arquivo vazio ou com código não-auth.
+  const login = (newToken: string) => {
+    localStorage.setItem('auth-token', newToken);
+    // Also set as cookie for server-side requests
+    document.cookie = `auth-token=${newToken}; path=/; max-age=${7 * 24 * 60 * 60}`; // 7 days
+    const decodedUser = decodeToken(newToken);
+    setToken(newToken);
+    setUser(decodedUser);
+    router.push('/admin/dashboard');
+  };
 
-// Deixando o arquivo vazio para desativar completamente a funcionalidade de autenticação.
+  const logout = () => {
+    localStorage.removeItem('auth-token');
+    // Also remove cookie
+    document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    setUser(null);
+    setToken(null);
+    router.push('/admin/login');
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

@@ -84,27 +84,26 @@ CREATE TRIGGER update_settings_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Tabela de propostas
+DROP TABLE IF EXISTS proposals;
 CREATE TABLE proposals (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    content TEXT,
-    status VARCHAR(50) DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'approved', 'rejected')),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id TEXT PRIMARY KEY,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+    client_data JSONB NOT NULL,
+    account_manager_data JSONB NOT NULL,
+    products JSONB NOT NULL,
+    total_setup NUMERIC(10, 2) NOT NULL,
+    total_monthly NUMERIC(10, 2) NOT NULL,
+    status VARCHAR(50) DEFAULT 'Salva',
+    type VARCHAR(50) DEFAULT 'GENERAL',
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Índices para a tabela de propostas
 CREATE INDEX idx_proposals_user_id ON proposals(user_id);
-CREATE INDEX idx_proposals_status ON proposals(status);
 
 -- Trigger para a tabela de propostas
 CREATE TRIGGER update_proposals_updated_at
     BEFORE UPDATE ON proposals
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
-
--- Inserir dados de exemplo para propostas (associadas ao admin)
-INSERT INTO proposals (user_id, title, content, status) VALUES
-((SELECT id FROM users WHERE email = 'admin@nextn.com'), 'Proposta A', 'Conteúdo da proposta A.', 'sent'),
-((SELECT id FROM users WHERE email = 'admin@nextn.com'), 'Proposta B', 'Conteúdo da proposta B.', 'approved');

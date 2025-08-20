@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { ClientManagerForm, ClientData, AccountManagerData } from './ClientManagerForm';
 import { ClientManagerInfo } from './ClientManagerInfo';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -23,6 +22,9 @@ import {
     Download,
     Trash2
 } from 'lucide-react';
+import { Proposal, ProposalItem, ClientData, AccountManagerData } from '@/types';
+import { ClientManagerForm } from './ClientManagerForm';
+import { useToast } from '@/hooks/use-toast';
 
 // Interfaces
 interface FiberPlan {
@@ -45,36 +47,65 @@ interface ContractTerm {
     paybackMonths: number;
 }
 
-interface Product {
-    id: string;
-    type: 'FIBER';
-    description: string;
-    setup: number;
-    monthly: number;
-    details: any;
-}
-
-interface Proposal {
-    id: string;
-    client: ClientData;
-    accountManager: AccountManagerData;
-    products: Product[];
-    totalSetup: number;
-    totalMonthly: number;
-    createdAt: string;
-}
-
 interface FiberLinkCalculatorProps {
     userRole?: 'admin' | 'user';
     onBackToPanel?: () => void;
+    userId: string;
+    userEmail: string;
 }
 
-const FiberLinkCalculator: React.FC<FiberLinkCalculatorProps> = ({ userRole, onBackToPanel }) => {
+const FiberLinkCalculator: React.FC<FiberLinkCalculatorProps> = ({ userRole, onBackToPanel, userId, userEmail }) => {
     // Estados de gerenciamento de propostas
     const [currentProposal, setCurrentProposal] = useState<Proposal | null>(null);
     const [viewMode, setViewMode] = useState<'search' | 'client-form' | 'calculator'>('search');
     const [proposals, setProposals] = useState<Proposal[]>([]);
     const [searchTerm, setSearchTerm] = useState<string>('');
+    const [prices, setPrices] = useState<{ [key: string]: number }>({});
+
+    const handlePriceChange = (speed: number, priceType: 'price12' | 'price24' | 'price36', value: string) => {
+        const numericValue = parseFloat(value.replace(',', '.')) || 0;
+        setFiberPlans(prevPlans =>
+            prevPlans.map(plan =>
+                plan.speed === speed
+                    ? { ...plan, [priceType]: numericValue }
+                    : plan
+            )
+        );
+    };
+
+    const { toast } = useToast();
+
+    const handleSavePrices = async () => {
+        try {
+            const token = localStorage.getItem('auth-token');
+            const response = await fetch('/api/fiber-prices', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ fiberPlans }),
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                throw new Error('Falha ao salvar os preços');
+            }
+
+            toast({
+                title: 'Sucesso',
+                description: 'Preços salvos com sucesso',
+                variant: 'default'
+            });
+        } catch (error) {
+            console.error('Erro ao salvar preços:', error);
+            toast({
+                title: 'Erro', 
+                description: 'Erro ao salvar os preços',
+                variant: 'destructive'
+            });
+        }
+    };
 
     // Estados dos dados do cliente e gerente
     const [clientData, setClientData] = useState<ClientData>({
@@ -87,7 +118,7 @@ const FiberLinkCalculator: React.FC<FiberLinkCalculatorProps> = ({ userRole, onB
         email: '',
         phone: ''
     });
-    const [addedProducts, setAddedProducts] = useState<Product[]>([]);
+    const [addedProducts, setAddedProducts] = useState<ProposalItem[]>([]);
 
     // Estados da calculadora
     const [selectedSpeed, setSelectedSpeed] = useState<number>(0);
@@ -117,30 +148,34 @@ const FiberLinkCalculator: React.FC<FiberLinkCalculatorProps> = ({ userRole, onB
             { speed: 900, price12: 0, price24: 5000.00, price36: 4474.00, installationCost: 1996.00, description: "900 Mbps" },
             { speed: 1000, price12: 17754.00, price24: 5264.00, price36: 4737.00, installationCost: 1996.00, description: "1000 Mbps (1 Gbps)" }
         ];
+        setFiberPlans(initialFiberPlans);
 
-        const savedPlans = localStorage.getItem('fiberLinkPrices');
-        if (savedPlans) {
-            setFiberPlans(JSON.parse(savedPlans));
-        } else {
-            setFiberPlans(initialFiberPlans);
-        }
-    }, []);
-
-    const handlePriceChange = (speed: number, term: 'price12' | 'price24' | 'price36', value: string) => {
-        const newPlans = fiberPlans.map(plan => {
-            if (plan.speed === speed) {
-                const sanitizedValue = value.replace(/[^0-9,.]/g, '').replace(',', '.');
-                return { ...plan, [term]: parseFloat(sanitizedValue) || 0 };
+        const fetchProposals = async () => {
+            try {
+                // Get token from localStorage for authentication
+                const token = localStorage.getItem('auth-token');
+                
+                const response = await fetch('/api/proposals?type=FIBER', {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // Include Authorization header if token exists
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    },
+                    credentials: 'include', // This will include cookies in the request
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setProposals(data);
+                } else {
+                    console.error('Falha ao buscar propostas de Fibra');
+                }
+            } catch (error) {
+                console.error('Erro ao conectar com a API:', error);
             }
-            return plan;
-        });
-        setFiberPlans(newPlans);
-    };
+        };
 
-    const handleSavePrices = () => {
-        localStorage.setItem('fiberLinkPrices', JSON.stringify(fiberPlans));
-        alert('Preços salvos com sucesso!');
-    };
+        fetchProposals();
+    }, []);
 
     const installationTiers: InstallationTier[] = [
         { minValue: 0, maxValue: 4500, cost: 998.00 },
@@ -166,9 +201,9 @@ const FiberLinkCalculator: React.FC<FiberLinkCalculatorProps> = ({ userRole, onB
         }
     };
 
-    const getInstallationCost = (value: number): number => {
-        const tier = installationTiers.find(t => value >= t.minValue && value <= t.maxValue);
-        return tier ? tier.cost : 2500.00; // Valor padrão para acima de R$ 12.000
+    const getInstallationCost = (speed: number): number => {
+        const plan = fiberPlans.find(p => p.speed === speed);
+        return plan ? plan.installationCost : 0;
     };
 
     const calculateResult = () => {
@@ -178,7 +213,7 @@ const FiberLinkCalculator: React.FC<FiberLinkCalculatorProps> = ({ userRole, onB
         const monthlyPrice = getMonthlyPrice(plan, contractTerm);
         if (monthlyPrice === 0) return null; // Plano não disponível para este prazo
 
-        const installationCost = includeInstallation ? getInstallationCost(projectValue || monthlyPrice * 12) : 0;
+        const installationCost = includeInstallation ? getInstallationCost(selectedSpeed) : 0;
         const contractInfo = contractTerms.find(c => c.months === contractTerm);
 
         return {
@@ -193,7 +228,10 @@ const FiberLinkCalculator: React.FC<FiberLinkCalculatorProps> = ({ userRole, onB
     const result = calculateResult();
 
     // Funções auxiliares
-    const formatCurrency = (value: number) => `R$ ${value.toFixed(2).replace('.', ',')}`;
+    const formatCurrency = (value: number | undefined | null) => {
+        if (value === undefined || value === null) return 'R$ 0,00';
+        return `R$ ${value.toFixed(2).replace('.', ',')}`;
+    };
     const generateUniqueId = () => `_${Math.random().toString(36).substr(2, 9)}`;
 
     // Gerenciamento de produtos
@@ -203,11 +241,14 @@ const FiberLinkCalculator: React.FC<FiberLinkCalculatorProps> = ({ userRole, onB
 
             setAddedProducts(prev => [...prev, {
                 id: generateUniqueId(),
-                type: 'FIBER',
+                name: `Link via Fibra ${result.plan.description}`,
                 description,
+                unitPrice: result.monthlyPrice,
                 setup: result.installationCost,
                 monthly: result.monthlyPrice,
+                quantity: 1,
                 details: {
+                    type: 'FIBER',
                     speed: selectedSpeed,
                     contractTerm,
                     includeInstallation,
@@ -221,31 +262,9 @@ const FiberLinkCalculator: React.FC<FiberLinkCalculatorProps> = ({ userRole, onB
         setAddedProducts(prev => prev.filter(p => p.id !== id));
     };
 
-    // Gerenciamento de propostas
-    useEffect(() => {
-        const savedProposals = localStorage.getItem('fiberProposals');
-        if (savedProposals) {
-            setProposals(JSON.parse(savedProposals));
-        }
-    }, []);
-
-    useEffect(() => {
-        if (proposals.length > 0) {
-            localStorage.setItem('fiberProposals', JSON.stringify(proposals));
-        }
-    }, [proposals]);
 
     const totalSetup = addedProducts.reduce((sum, p) => sum + p.setup, 0);
     const totalMonthly = addedProducts.reduce((sum, p) => sum + p.monthly, 0);
-
-    const generateProposalId = (): string => {
-        const now = new Date();
-        const year = now.getFullYear().toString().slice(-2);
-        const month = (now.getMonth() + 1).toString().padStart(2, '0');
-        const day = now.getDate().toString().padStart(2, '0');
-        const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-        return `FIBER-${year}${month}${day}-${random}`;
-    };
 
     const clearForm = () => {
         setClientData({ name: '', email: '', phone: '' });
@@ -265,39 +284,71 @@ const FiberLinkCalculator: React.FC<FiberLinkCalculatorProps> = ({ userRole, onB
 
     const editProposal = (proposal: Proposal) => {
         setCurrentProposal(proposal);
-        setClientData(proposal.client);
-        setAccountManagerData(proposal.accountManager);
+        setClientData(proposal.client || proposal.clientData || { name: '', email: '', phone: '' });
+        setAccountManagerData(proposal.accountManager || proposal.accountManagerData || { name: '', email: '', phone: '' });
         setAddedProducts(proposal.products);
         setViewMode('calculator');
     };
 
-    const saveProposal = () => {
+    const saveProposal = async () => {
         if (addedProducts.length === 0) {
             alert('Adicione pelo menos um produto à proposta.');
             return;
         }
 
-        const proposalToSave: Proposal = {
-            id: currentProposal?.id || generateProposalId(),
+        const proposalToSave = {
+            id: currentProposal?.id || generateUniqueId(), // Gera ID se for nova proposta
             client: clientData,
             accountManager: accountManagerData,
             products: addedProducts,
-            totalSetup,
-            totalMonthly,
-            createdAt: currentProposal?.createdAt || new Date().toISOString()
+            totalSetup: totalSetup,
+            totalMonthly: totalMonthly,
+            createdAt: new Date().toISOString(),
+            user_id: userId,
+            status: 'Pendente',
+            type: 'FIBER',
         };
 
-        if (currentProposal) {
-            // Editando proposta existente
-            setProposals(prev => prev.map(p => p.id === proposalToSave.id ? proposalToSave : p));
-        } else {
-            // Nova proposta
-            setProposals(prev => [...prev, proposalToSave]);
-        }
+        try {
+            console.log('Dados sendo enviados para a API:', proposalToSave);
+            
+            const token = localStorage.getItem('auth-token');
+            const response = await fetch('/api/proposals', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify(proposalToSave),
+                credentials: 'include'
+            });
 
-        setViewMode('search');
-        setCurrentProposal(null);
-        clearForm();
+            console.log('Status da resposta:', response.status);
+
+            if (response.ok) {
+                const savedProposal = await response.json();
+                if (currentProposal) {
+                    // Atualiza a proposta na lista
+                    setProposals(prev => prev.map(p => p.id === savedProposal.id ? savedProposal : p));
+                } else {
+                    // Adiciona nova proposta à lista
+                    setProposals(prev => [...prev, savedProposal]);
+                }
+                alert('Proposta salva com sucesso!');
+                
+                setViewMode('search');
+                setCurrentProposal(null);
+                clearForm();
+            } else {
+                const errorData = await response.json();
+                console.error('Erro da API:', errorData);
+                console.error('Status:', response.status);
+                throw new Error(errorData.error || 'Falha ao salvar a proposta');
+            }
+        } catch (error) {
+            console.error('Erro ao salvar proposta:', error);
+            alert(`Erro ao salvar proposta: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+        }
     };
 
     const cancelAction = () => {
@@ -307,7 +358,7 @@ const FiberLinkCalculator: React.FC<FiberLinkCalculatorProps> = ({ userRole, onB
     };
 
     const filteredProposals = (proposals || []).filter(p =>
-        (p.client?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        ((p.client?.name || p.clientData?.name || '').toLowerCase()).includes(searchTerm.toLowerCase()) ||
         (p.id?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     );
 
@@ -363,10 +414,10 @@ const FiberLinkCalculator: React.FC<FiberLinkCalculatorProps> = ({ userRole, onB
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {filteredProposals.map(p => (
-                                            <TableRow key={p.id} className="border-slate-800">
-                                                <TableCell>{p.id}</TableCell>
-                                                <TableCell>{p.client?.name || 'N/D'}</TableCell>
+                                        {filteredProposals.map((p, index) => (
+                                            <TableRow key={p.id || `proposal-${index}`} className="border-slate-800">
+                                                <TableCell>{p.id || 'N/A'}</TableCell>
+                                                <TableCell>{p.client?.name || p.clientData?.name || 'N/D'}</TableCell>
                                                 <TableCell>{new Date(p.createdAt).toLocaleDateString('pt-BR')}</TableCell>
                                                 <TableCell>{formatCurrency(p.totalMonthly)}</TableCell>
                                                 <TableCell>
@@ -450,17 +501,23 @@ const FiberLinkCalculator: React.FC<FiberLinkCalculatorProps> = ({ userRole, onB
                                                 </div>
 
                                                 <div>
-                                                    <Label htmlFor="contract-term">Prazo do Contrato</Label>
-                                                    <Select onValueChange={(value) => setContractTerm(Number(value))} value={contractTerm.toString()}>
-                                                        <SelectTrigger className="bg-slate-700">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent className="bg-slate-800 text-white">
-                                                            <SelectItem value="12">12 meses</SelectItem>
-                                                            <SelectItem value="24">24 meses</SelectItem>
-                                                            <SelectItem value="36">36 meses</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
+                                                    <Label className="text-white font-medium mb-3 block">Prazo Contratual</Label>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {[12, 24, 36, 48, 60].map((months) => (
+                                                            <Button
+                                                                key={months}
+                                                                variant={contractTerm === months ? "default" : "outline"}
+                                                                onClick={() => setContractTerm(months)}
+                                                                className={`px-6 py-2 ${
+                                                                    contractTerm === months
+                                                                        ? "bg-blue-600 hover:bg-blue-700 text-white"
+                                                                        : "border-slate-600 text-slate-300 hover:bg-slate-700"
+                                                                }`}
+                                                            >
+                                                                {months} Meses
+                                                            </Button>
+                                                        ))}
+                                                    </div>
                                                 </div>
 
                                                 <div className="flex items-center space-x-2 pt-2">

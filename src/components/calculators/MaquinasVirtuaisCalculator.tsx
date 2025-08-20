@@ -1,106 +1,71 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import '@/styles/print.css';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from '@/components/ui/checkbox';
-
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { Calculator, FileText, Settings, Server, Plus, Search, Trash2, Eye, Download, Edit, Cpu, MemoryStick, HardDrive, Network, Monitor, Save, BrainCircuit as Brain } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-    Calculator,
-    Phone,
-    PhoneForwarded,
-    Settings,
-    FileText,
-    Download,
-    Save,
-    Search,
-    Edit,
-    Plus,
-    User,
-    Briefcase,
-    Trash2,
-    Server,
-    Brain,
-    Cpu,
-    MemoryStick,
-    HardDrive,
-    Network
-} from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
-import { ClientManagerForm, ClientData, AccountManagerData } from './ClientManagerForm';
+import { ClientManagerForm } from './ClientManagerForm';
 import { ClientManagerInfo } from './ClientManagerInfo';
+import { Proposal, ProposalItem, ClientData, AccountManagerData } from '@/types';
 
-// Interfaces
-interface PABXTier {
-    min: number;
-    max: number;
-    setup: number;
-    monthly: number;
-}
 
-interface SIPPlan {
-    name: string;
-    type: 'PLANO' | 'TARIFADO';
-    setup: number;
-    monthly: number;
-    monthlyWithEquipment?: number; // Opcional para planos que não têm essa opção
-    channels: number;
-}
-
-interface PABXResult {
-    setup: number;
-    baseMonthly: number;
-    deviceRentalCost: number;
-    aiAgentCost: number;
-    totalMonthly: number;
-}
-
-interface SIPResult {
-    setup: number;
-    monthly: number;
-    additionalChannelsCost: number;
-}
-
-// Interface para um produto adicionado à proposta
-type ProductType = 'VM_BASICA' | 'VM_AVANCADA' | 'VM_PREMIUM';
-
-interface Product {
-    id: string;
-    type: ProductType;
-    description: string;
-    setup: number;
-    monthly: number;
-    details: any;
-}
-
-interface Proposal {
-    id: string;
-    client: ClientData;
-    accountManager: AccountManagerData;
-    products: Product[];
-    totalSetup: number;
-    totalMonthly: number;
-    createdAt: string;
-}
 
 interface MaquinasVirtuaisCalculatorProps {
     userRole?: 'admin' | 'user';
     onBackToPanel?: () => void;
+    userId: string;
+    userEmail: string;
 }
 
-const MaquinasVirtuaisCalculator: React.FC<MaquinasVirtuaisCalculatorProps> = ({ userRole, onBackToPanel }) => {
+const MaquinasVirtuaisCalculator: React.FC<MaquinasVirtuaisCalculatorProps> = ({ userRole, onBackToPanel, userId, userEmail }) => {
+    const { token } = useAuth();
+    const { toast } = useToast();
+    
     // Estados de gerenciamento de propostas
     const [currentProposal, setCurrentProposal] = useState<Proposal | null>(null);
     const [viewMode, setViewMode] = useState<'search' | 'client-form' | 'calculator'>('search');
     const [proposals, setProposals] = useState<Proposal[]>([]);
     const [searchTerm, setSearchTerm] = useState<string>('');
+    
+    // Estados para configurações de preços
+    const [pisCofins, setPisCofins] = useState<number>(3.65);
+    const [iss, setIss] = useState<number>(5.00);
+    const [csllIr, setCsllIr] = useState<number>(8.88);
+    const [markup, setMarkup] = useState<number>(40);
+    const [commission, setCommission] = useState<number>(3.00);
+    const [vcpuWindows, setVcpuWindows] = useState<number>(45.5);
+    const [vcpuLinux, setVcpuLinux] = useState<number>(26.44);
+    const [ramCost, setRamCost] = useState<number>(11.13);
+    const [hddSas, setHddSas] = useState<number>(0.2);
+    const [ssdPerformance, setSsdPerformance] = useState<number>(0.35);
+    const [nvme, setNvme] = useState<number>(0.45);
+    const [network1Gbps, setNetwork1Gbps] = useState<number>(0);
+    const [network10Gbps, setNetwork10Gbps] = useState<number>(100);
+    const [windowsServer2022, setWindowsServer2022] = useState<number>(135);
+    const [windows10Pro, setWindows10Pro] = useState<number>(120);
+    const [ubuntuServer, setUbuntuServer] = useState<number>(0);
+    const [centosStream, setCentosStream] = useState<number>(0);
+    const [debian12, setDebian12] = useState<number>(0);
+    const [rockyLinux, setRockyLinux] = useState<number>(0);
+    const [backupPerGb, setBackupPerGb] = useState<number>(1.25);
+    const [additionalIp, setAdditionalIp] = useState<number>(35);
+    const [discount12m, setDiscount12m] = useState<number>(0);
+    const [discount24m, setDiscount24m] = useState<number>(5);
+    const [discount36m, setDiscount36m] = useState<number>(10);
+    const [discount48m, setDiscount48m] = useState<number>(15);
+    const [discount60m, setDiscount60m] = useState<number>(20);
+    const [setupFeeGeneral, setSetupFeeGeneral] = useState<number>(0);
+    const [managementSupport, setManagementSupport] = useState<number>(250);
 
     // Estados dos dados do cliente e gerente
     const [clientData, setClientData] = useState<ClientData>({
@@ -113,37 +78,16 @@ const MaquinasVirtuaisCalculator: React.FC<MaquinasVirtuaisCalculatorProps> = ({
         email: '',
         phone: ''
     });
-    const [addedProducts, setAddedProducts] = useState<Product[]>([]);
+    const [addedProducts, setAddedProducts] = useState<ProposalItem[]>([]);
+    const [proposalItems, setProposalItems] = useState<ProposalItem[]>([]);
+    const [monthlySupportCost, setMonthlySupportCost] = useState<number>(250);
 
-    // Estados PABX
-    const [pabxExtensions, setPabxExtensions] = useState<number>(0);
-    const [pabxIncludeDevices, setPabxIncludeDevices] = useState<boolean>(false);
-    const [pabxDeviceQuantity, setPabxDeviceQuantity] = useState<number>(0);
-    const [pabxIncludeSetup, setPabxIncludeSetup] = useState<boolean>(true);
-    const [pabxResult, setPabxResult] = useState<PABXResult | null>(null);
-
-    // Estados Agente IA
-    const [includeAIAgent, setIncludeAIAgent] = useState(false);
-    const [selectedAIAgentPlan, setSelectedAIAgentPlan] = useState('');
-
-    // Estados SIP
-    const [selectedSipPlan, setSelectedSipPlan] = useState<string>('');
-    const [sipAdditionalChannels, setSipAdditionalChannels] = useState<number>(0);
-    const [sipWithEquipment, setSipWithEquipment] = useState<boolean>(false);
-    const [sipIncludeSetup, setSipIncludeSetup] = useState<boolean>(true);
-    const [sipResult, setSipResult] = useState<SIPResult | null>(null);
 
     // Estados para regime tributário
     const [selectedTaxRegime, setSelectedTaxRegime] = useState<string>('lucro_real');
-    const [pisCofins, setPisCofins] = useState<string>('3,65');
-    const [iss, setIss] = useState<string>('5,00');
-    const [csllIr, setCsllIr] = useState<string>('8,88');
 
-    // Estados para configurações de preço
-    const [markup, setMarkup] = useState<number>(30);
+    // Estados para configurações de preço (removidos duplicados)
     const [estimatedNetMargin, setEstimatedNetMargin] = useState<number>(0);
-    const [commissionPercentage, setCommissionPercentage] = useState<number>(3);
-    const [setupFee, setSetupFee] = useState<number>(500);
 
     // Estado para controle de abas
     const [activeTab, setActiveTab] = useState<string>('calculator');
@@ -162,417 +106,61 @@ const MaquinasVirtuaisCalculator: React.FC<MaquinasVirtuaisCalculatorProps> = ({
     const [vmVpnSiteToSite, setVmVpnSiteToSite] = useState<boolean>(false);
     const [vmContractPeriod, setVmContractPeriod] = useState<number>(12);
 
-    // Estados para custos de recursos VM
-    const [vcpuWindowsCost, setVcpuWindowsCost] = useState<number>(15);
-    const [vcpuLinuxCost, setVcpuLinuxCost] = useState<number>(10);
-    const [ramCost, setRamCost] = useState<number>(8);
-    const [hddSasCost, setHddSasCost] = useState<number>(0.5);
-    const [ssdPerformanceCost, setSsdPerformanceCost] = useState<number>(1.5);
-    const [nvmeCost, setNvmeCost] = useState<number>(2.5);
-    const [network1GbpsCost, setNetwork1GbpsCost] = useState<number>(0);
-    const [network10GbpsCost, setNetwork10GbpsCost] = useState<number>(100);
-    const [windowsServerCost, setWindowsServerCost] = useState<number>(135);
-    const [windows10ProCost, setWindows10ProCost] = useState<number>(120);
-    const [ubuntuCost, setUbuntuCost] = useState<number>(0);
-    const [centosCost, setCentosCost] = useState<number>(0);
-    const [debianCost, setDebianCost] = useState<number>(0);
-    const [rockyLinuxCost, setRockyLinuxCost] = useState<number>(0);
-    const [backupCostPerGb, setBackupCostPerGb] = useState<number>(1.25);
-    const [additionalIpCost, setAdditionalIpCost] = useState<number>(15);
+    // Estados para custos de recursos VM (removidos duplicados)
     const [snapshotCost, setSnapshotCost] = useState<number>(25);
     const [vpnSiteToSiteCost, setVpnSiteToSiteCost] = useState<number>(50);
 
     // Dados para as tabelas de List Price
-    const pabxListPriceData = {
-        headers: ['Serviço', 'Até 10 ramais', 'De 11 a 20 ramais', 'De 21 a 30 ramais', 'De 31 a 50 ramais', 'De 51 a 100 ramais', 'De 101 a 500 ramais', 'De 501 a 1.000 ramais'],
-        rows: [
-            { service: 'Setup (cobrança única)', values: ['1.250,00', '2.000,00', '2.500,00', '3.000,00', '3.500,00', 'Valor a combinar', 'Valor a combinar'] },
-            { service: 'Valor por ramal (mensal unitário)', values: ['30,00', '29,00', '28,00', '27,00', '26,00', '25,00', '24,50'] },
-            { service: 'Valor hospedagem (mensal)', values: ['200,00', '220,00', '250,00', '300,00', '400,00', 'Valor a combinar', 'Valor a combinar'] },
-            { service: 'Aluguel Aparelho Grandstream (mensal)', values: ['35,00', '34,00', '33,00', '32,00', '30,00', 'Valor a combinar', 'Valor a combinar'] },
-        ],
-    };
-
-    const sipListPriceData = {
-        headers: {
-            top: [
-                { title: 'SIP TARIFADO', span: 2 },
-                { title: 'SIP TARIFADO', span: 1 },
-                { title: 'SIP TARIFADO', span: 1 },
-                { title: 'SIP TARIFADO', span: 1 },
-                { title: 'SIP TARIFADO', span: 1 },
-                { title: 'SIP ILIMITADO', span: 1 },
-                { title: 'SIP ILIMITADO', span: 1 },
-                { title: 'SIP ILIMITADO', span: 1 },
-                { title: 'SIP ILIMITADO', span: 1 },
-                { title: 'SIP ILIMITADO', span: 1 }
-            ],
-            bottom: [
-                'Call Center',
-                '2 canais',
-                '4 Canais',
-                '10 Canais',
-                '30 Canais',
-                '60 Canais',
-                '5 Canais',
-                '10 Canais',
-                '20 Canais',
-                '30 Canais',
-                '60 Canais'
-            ]
-        },
-        rows: [
-            {
-                service: 'Canais Adicionais (Assinatura Mensal)',
-                values: [
-                    'Não Aplicável',
-                    'Sem possibilidade',
-                    'Sem possibilidade',
-                    'Sem possibilidade',
-                    'Sem possibilidade',
-                    'Sem possibilidade',
-                    'Até 5 canais R$ 30 por canal adicional',
-                    'Até 5 canais R$ 30 por canal adicional',
-                    'Até 5 canais R$ 30 por canal adicional',
-                    'Até 5 canais R$ 30 por canal adicional',
-                    ''
-                ]
-            },
-            {
-                service: 'Canais Adicionais (Franquia Mensal)',
-                values: [
-                    'Não Aplicável',
-                    'Sem possibilidade',
-                    '',
-                    'Até 10 canais R$25 por canal adicional/mês',
-                    'Até 20 canais R$ 25 por canal adicional/mês',
-                    'Até 30 canais R$ 25 por canal adicional/mês',
-                    '',
-                    '',
-                    '',
-                    '',
-                    'Sem possibilidade'
-                ]
-            },
-            {
-                service: 'Franquia/Assinatura Mensal (Sem Equipamentos)',
-                values: [
-                    'R$ 200 (Franquia)',
-                    'R$ 150 (Franquia)',
-                    'R$ 250 (Franquia)',
-                    'R$ 350 (Franquia)',
-                    'R$ 550 (Franquia)',
-                    'R$ 1.000 (Franquia)',
-                    'R$ 350 (Assinatura)',
-                    'R$ 450 (Assinatura)',
-                    'R$ 650 (Assinatura)',
-                    'R$ 850 (Assinatura)',
-                    'R$ 1.600 (Assinatura)'
-                ]
-            },
-            {
-                service: 'Franquia/Assinatura Mensal (Com Equipamentos)',
-                values: [
-                    'Não Aplicável',
-                    'Sem possibilidade',
-                    'R$ 500 (Franquia)',
-                    'R$ 650 (Franquia)',
-                    'R$ 1.200 (Franquia)',
-                    '',
-                    'R$ 500 (Assinatura)',
-                    'R$ 600 (Assinatura)',
-                    'R$ 800 (Assinatura)',
-                    'R$ 950 (Assinatura)',
-                    'R$ 1.700 (Assinatura)'
-                ]
-            },
-            {
-                service: 'Minutos Mensais Inclusos para Brasil Móvel',
-                values: [
-                    'Não Aplicável',
-                    '',
-                    'Não aplicável',
-                    '',
-                    '',
-                    '',
-                    '15.000 Minutos',
-                    '20.000 Minutos',
-                    '25.000 Minutos',
-                    '30.000 Minutos',
-                    '60.000 Minutos'
-                ]
-            },
-            {
-                service: 'Números Incluídos (Novos ou Portados)',
-                values: [
-                    'Consultar',
-                    '',
-                    'Máximo 3 Números',
-                    '',
-                    'Máximo 4 Números',
-                    '',
-                    'Máximo 5 Números',
-                    'Máximo 10 Números',
-                    'Máximo 15 Números',
-                    'Máximo 20 Números',
-                    'Máximo 30 Números'
-                ]
-            },
-            {
-                service: 'Numeração Adicional (Mensalidade)',
-                values: [
-                    'Consultar',
-                    '',
-                    'R$ 10 por Número',
-                    '',
-                    '',
-                    '',
-                    '',
-                    '',
-                    'R$ 10 por Número',
-                    '',
-                    ''
-                ]
-            },
-            {
-                service: 'Tarifa Local Fixo (por minuto)',
-                values: [
-                    'R$ 0,015 por minuto',
-                    '',
-                    'R$ 0,02 por minuto',
-                    '',
-                    '',
-                    '',
-                    '',
-                    '',
-                    'Ilimitado',
-                    '',
-                    ''
-                ]
-            },
-            {
-                service: 'Tarifa DDD Fixo (por minuto)',
-                values: [
-                    'R$ 0,05 por minuto',
-                    '',
-                    'R$ 0,06 por minuto',
-                    '',
-                    '',
-                    '',
-                    '',
-                    '',
-                    'Ilimitado',
-                    '',
-                    ''
-                ]
-            },
-            {
-                service: 'Tarifa Brasil Móvel (por minuto)',
-                values: [
-                    'R$ 0,09 por minuto',
-                    '',
-                    'R$ 0,10 por minuto',
-                    '',
-                    '',
-                    '',
-                    '',
-                    '',
-                    'R$ 10 por minuto',
-                    '',
-                    ''
-                ]
-            }
-        ],
-    };
-
-    const aiAgentPlans: { [key: string]: { name: string; monthlyCost: number; messages: string; minutes: string; premiumVoice: string; credits: string; color: string } } = {
-        plan20k: {
-            name: '20K',
-            monthlyCost: 720.00,
-            credits: '20.000 Créditos de Interação',
-            messages: '10.000 mensagens* ou',
-            minutes: '2.000 minutos** ou',
-            premiumVoice: '1.000 voz premium*** ou',
-            color: 'bg-blue-900'
-        },
-        plan40k: {
-            name: '40K',
-            monthlyCost: 1370.00,
-            credits: '40.000 Créditos de Interação',
-            messages: '20.000 mensagens* ou',
-            minutes: '4.000 minutos** ou',
-            premiumVoice: '2.000 voz premium*** ou',
-            color: 'bg-blue-800'
-        },
-        plan60k: {
-            name: '60K',
-            monthlyCost: 1940.00,
-            credits: '60.000 Créditos de Interação',
-            messages: '30.000 mensagens* ou',
-            minutes: '6.000 minutos** ou',
-            premiumVoice: '3.000 voz premium*** ou',
-            color: 'bg-blue-600'
-        },
-        plan100k: {
-            name: '100K',
-            monthlyCost: 3060.00,
-            credits: '100.000 Créditos de Interação',
-            messages: '50.000 mensagens* ou',
-            minutes: '10.000 minutos** ou',
-            premiumVoice: '5.000 voz premium*** ou',
-            color: 'bg-cyan-500'
-        },
-        plan150k: {
-            name: '150K',
-            monthlyCost: 4320.00,
-            credits: '150.000 Créditos de Interação',
-            messages: '75.000 mensagens* ou',
-            minutes: '15.000 minutos** ou',
-            premiumVoice: '7.500 voz premium*** ou',
-            color: 'bg-teal-400'
-        },
-        plan200k: {
-            name: '200K',
-            monthlyCost: 5400.00,
-            credits: '200.000 Créditos de Interação',
-            messages: '100.000 mensagens* ou',
-            minutes: '20.000 minutos** ou',
-            premiumVoice: '10.000 voz premium*** ou',
-            color: 'bg-teal-400'
-        },
-    };
-
-    const pabxTiers: PABXTier[] = [
-        { min: 1, max: 10, setup: 1250, monthly: 35 },
-        { min: 11, max: 20, setup: 2000, monthly: 33 },
-        { min: 21, max: 30, setup: 2500, monthly: 31 },
-        { min: 31, max: 50, setup: 3000, monthly: 29 },
-        { min: 51, max: 100, setup: 3500, monthly: 27 },
-        { min: 101, max: 500, setup: 0, monthly: 25 }, // Valor a combinar
-        { min: 501, max: 1000, setup: 0, monthly: 23 } // Valor a combinar
-    ];
-
-    const sipPlans: SIPPlan[] = [
-        // Planos TARIFADO
-        { name: 'SIP TARIFADO Call Center', type: 'TARIFADO', setup: 500, monthly: 200, channels: 0 },
-        { name: 'SIP TARIFADO 2 Canais', type: 'TARIFADO', setup: 500, monthly: 150, channels: 2 },
-        { name: 'SIP TARIFADO 4 Canais', type: 'TARIFADO', setup: 500, monthly: 250, monthlyWithEquipment: 500, channels: 4 },
-        { name: 'SIP TARIFADO 10 Canais', type: 'TARIFADO', setup: 500, monthly: 350, monthlyWithEquipment: 500, channels: 10 },
-        { name: 'SIP TARIFADO 30 Canais', type: 'TARIFADO', setup: 500, monthly: 550, monthlyWithEquipment: 650, channels: 30 },
-        { name: 'SIP TARIFADO 60 Canais', type: 'TARIFADO', setup: 500, monthly: 1000, monthlyWithEquipment: 1200, channels: 60 },
-        // Planos ILIMITADO
-        { name: 'SIP ILIMITADO 5 Canais', type: 'PLANO', setup: 500, monthly: 350, monthlyWithEquipment: 500, channels: 5 },
-        { name: 'SIP ILIMITADO 10 Canais', type: 'PLANO', setup: 500, monthly: 450, monthlyWithEquipment: 600, channels: 10 },
-        { name: 'SIP ILIMITADO 20 Canais', type: 'PLANO', setup: 500, monthly: 650, monthlyWithEquipment: 800, channels: 20 },
-        { name: 'SIP ILIMITADO 30 Canais', type: 'PLANO', setup: 500, monthly: 850, monthlyWithEquipment: 950, channels: 30 },
-        { name: 'SIP ILIMITADO 60 Canais', type: 'PLANO', setup: 500, monthly: 1600, monthlyWithEquipment: 1700, channels: 60 },
-    ];
-
-    const costPerAdditionalChannel = 50;
-    const equipmentRentalCost = 35;
-
-    // Lógica de Cálculo
-    const calculatePabxPrice = () => {
-        if (pabxExtensions <= 0) {
-            setPabxResult(null);
-            return;
-        }
-
-        const tier = pabxTiers.find(t => pabxExtensions >= t.min && pabxExtensions <= t.max);
-        if (!tier) {
-            setPabxResult(null);
-            return;
-        }
-
-        let setup = pabxIncludeSetup ? tier.setup : 0;
-        let baseMonthly = tier.monthly * pabxExtensions;
-        let deviceRentalCost = 0;
-        let aiAgentCost = 0;
-
-        if (pabxIncludeDevices) {
-            deviceRentalCost = pabxDeviceQuantity * 35; // R$ 35 por dispositivo
-        }
-
-        if (includeAIAgent) {
-            const plan = Object.values(aiAgentPlans).find(p => p.name === selectedAIAgentPlan);
-            if (plan) {
-                aiAgentCost = plan.monthlyCost;
-            }
-        }
-
-        const totalMonthly = baseMonthly + deviceRentalCost + aiAgentCost;
-        setPabxResult({ setup, baseMonthly, deviceRentalCost, aiAgentCost, totalMonthly });
-    };
-
-    const calculateSipPrice = () => {
-        if (!selectedSipPlan) {
-            setSipResult(null);
-            return;
-        }
-
-        const plan = sipPlans.find(p => p.name === selectedSipPlan);
-        if (plan) {
-            let monthly = (sipWithEquipment && plan.monthlyWithEquipment) ? plan.monthlyWithEquipment : plan.monthly;
-            let additionalChannelsCost = 0;
-
-            if (plan.type === 'TARIFADO' && sipAdditionalChannels > 0) {
-                additionalChannelsCost = sipAdditionalChannels * 20; // R$ 20 por canal adicional
-                monthly += additionalChannelsCost;
-            }
-
-            const setup = sipIncludeSetup ? plan.setup : 0;
-            setSipResult({ setup, monthly, additionalChannelsCost });
-        } else {
-            setSipResult(null);
-        }
-    };
-
-    // Efeitos para cálculos e salvar propostas
-    useEffect(() => {
-        const savedProposals = localStorage.getItem('proposals');
-        if (savedProposals) {
-            setProposals(JSON.parse(savedProposals));
-        }
-    }, []);
 
     useEffect(() => {
-        calculatePabxPrice();
-    }, [pabxExtensions, pabxIncludeDevices, pabxDeviceQuantity, pabxIncludeSetup, includeAIAgent, selectedAIAgentPlan]);
+        const fetchProposals = async () => {
+            if (!token) return;
+            
+            try {
+                const response = await fetch('/api/proposals?type=VM', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setProposals(data);
+                }
+            } catch (error) {
+                // Handle error silently
+            }
+        };
 
-    useEffect(() => {
-        const plan = sipPlans.find(p => p.name === selectedSipPlan);
-        if (plan && !plan.monthlyWithEquipment && sipWithEquipment) {
-            setSipWithEquipment(false);
-        } else {
-            calculateSipPrice();
-        }
-    }, [selectedSipPlan, sipAdditionalChannels, sipWithEquipment, sipIncludeSetup]);
+        fetchProposals();
+    }, [token]);
+
 
     // Função para alterar regime tributário
     const handleTaxRegimeChange = (regime: string) => {
         setSelectedTaxRegime(regime);
-        
-        // Definir valores dos impostos conforme o regime
+        // Atualizar os valores dos impostos baseado no regime selecionado
         switch (regime) {
             case 'lucro_real':
-                setPisCofins('3,65');
-                setIss('5,00');
-                setCsllIr('8,88');
+                setPisCofins(3.65);
+                setIss(5.00);
+                setCsllIr(8.88);
                 break;
             case 'lucro_presumido':
-                setPisCofins('3,65');
-                setIss('5,00');
-                setCsllIr('4,80');
+                setPisCofins(3.65);
+                setIss(5.00);
+                setCsllIr(4.80);
                 break;
             case 'lucro_real_reduzido':
-                setPisCofins('0,00');
-                setIss('5,00');
-                setCsllIr('2,40');
+                setPisCofins(0.00);
+                setIss(5.00);
+                setCsllIr(2.40);
                 break;
             case 'simples_nacional':
-                setPisCofins('0,00');
-                setIss('0,00');
-                setCsllIr('6,00');
+                setPisCofins(0.00);
+                setIss(0.00);
+                setCsllIr(6.00);
                 break;
             default:
                 break;
@@ -581,9 +169,7 @@ const MaquinasVirtuaisCalculator: React.FC<MaquinasVirtuaisCalculatorProps> = ({
 
     // Cálculo dos impostos totais
     const totalTaxes = useMemo(() => {
-        return parseFloat(pisCofins.replace(',', '.')) + 
-               parseFloat(iss.replace(',', '.')) + 
-               parseFloat(csllIr.replace(',', '.'));
+        return pisCofins + iss + csllIr;
     }, [pisCofins, iss, csllIr]);
 
     // Função para calcular o custo da VM
@@ -592,7 +178,7 @@ const MaquinasVirtuaisCalculator: React.FC<MaquinasVirtuaisCalculatorProps> = ({
 
         // Custo vCPU baseado no OS
         const isWindows = vmOperatingSystem.includes('Windows');
-        const vcpuCost = isWindows ? vcpuWindowsCost : vcpuLinuxCost;
+        const vcpuCost = isWindows ? vcpuWindows : vcpuLinux;
         totalCost += vmCpuCores * vcpuCost;
 
         // Custo RAM
@@ -602,50 +188,50 @@ const MaquinasVirtuaisCalculator: React.FC<MaquinasVirtuaisCalculatorProps> = ({
         let storageCost = 0;
         switch (vmStorageType) {
             case 'HDD SAS':
-                storageCost = hddSasCost;
+                storageCost = hddSas;
                 break;
             case 'SSD Performance':
-                storageCost = ssdPerformanceCost;
+                storageCost = ssdPerformance;
                 break;
             case 'NVMe':
-                storageCost = nvmeCost;
+                storageCost = nvme;
                 break;
         }
         totalCost += vmStorageSize * storageCost;
 
         // Custo Rede
         if (vmNetworkSpeed === '10 Gbps') {
-            totalCost += network10GbpsCost;
+            totalCost += network10Gbps;
         }
 
         // Custo Sistema Operacional
         switch (vmOperatingSystem) {
             case 'Windows Server 2022 Standard':
-                totalCost += windowsServerCost;
+                totalCost += windowsServer2022;
                 break;
             case 'Windows 10 Pro':
-                totalCost += windows10ProCost;
+                totalCost += windows10Pro;
                 break;
             case 'Ubuntu Server 22.04 LTS':
-                totalCost += ubuntuCost;
+                totalCost += ubuntuServer;
                 break;
             case 'CentOS Stream 9':
-                totalCost += centosCost;
+                totalCost += centosStream;
                 break;
             case 'Debian 12':
-                totalCost += debianCost;
+                totalCost += debian12;
                 break;
             case 'Rocky Linux 9':
-                totalCost += rockyLinuxCost;
+                totalCost += rockyLinux;
                 break;
         }
 
         // Serviços Adicionais
         if (vmBackupSize > 0) {
-            totalCost += vmBackupSize * backupCostPerGb;
+            totalCost += vmBackupSize * backupPerGb;
         }
         if (vmAdditionalIp) {
-            totalCost += additionalIpCost;
+            totalCost += additionalIp;
         }
         if (vmSnapshot) {
             totalCost += snapshotCost;
@@ -658,9 +244,9 @@ const MaquinasVirtuaisCalculator: React.FC<MaquinasVirtuaisCalculatorProps> = ({
     }, [
         vmCpuCores, vmRamGb, vmStorageType, vmStorageSize, vmNetworkSpeed, vmOperatingSystem,
         vmBackupSize, vmAdditionalIp, vmSnapshot, vmVpnSiteToSite,
-        vcpuWindowsCost, vcpuLinuxCost, ramCost, hddSasCost, ssdPerformanceCost, nvmeCost,
-        network1GbpsCost, network10GbpsCost, windowsServerCost, windows10ProCost, ubuntuCost,
-        centosCost, debianCost, rockyLinuxCost, backupCostPerGb, additionalIpCost, snapshotCost, vpnSiteToSiteCost
+        vcpuWindows, vcpuLinux, ramCost, hddSas, ssdPerformance, nvme,
+        network1Gbps, network10Gbps, windowsServer2022, windows10Pro, ubuntuServer,
+        centosStream, debian12, rockyLinux, backupPerGb, additionalIp, snapshotCost, vpnSiteToSiteCost
     ]);
 
     // Cálculo do desconto por período contratual
@@ -693,59 +279,6 @@ const MaquinasVirtuaisCalculator: React.FC<MaquinasVirtuaisCalculatorProps> = ({
         return finalPrice;
     }, [calculateVMCost, totalTaxes, markup, contractDiscount]);
 
-    // Função para adicionar VM à proposta
-    const handleAddVMProduct = () => {
-        if (vmName && vmCpuCores && vmRamGb && vmStorageSize) {
-            let description = `${vmName} - ${vmCpuCores} vCPU, ${vmRamGb}GB RAM, ${vmStorageSize}GB ${vmStorageType}, ${vmNetworkSpeed}, ${vmOperatingSystem}`;
-            
-            // Adicionar serviços adicionais à descrição
-            const additionalServices = [];
-            if (vmBackupSize > 0) additionalServices.push(`Backup ${vmBackupSize}GB`);
-            if (vmAdditionalIp) additionalServices.push('IP Adicional');
-            if (vmSnapshot) additionalServices.push('Snapshot');
-            if (vmVpnSiteToSite) additionalServices.push('VPN Site-to-Site');
-            
-            if (additionalServices.length > 0) {
-                description += ` + ${additionalServices.join(', ')}`;
-            }
-            
-            description += ` (${vmContractPeriod} meses)`;
-
-            const vmProduct = {
-                id: generateUniqueId(),
-                type: 'VM',
-                description,
-                setup: setupFee,
-                monthly: vmFinalPrice,
-                details: { 
-                    name: vmName,
-                    cpuCores: vmCpuCores,
-                    ramGb: vmRamGb,
-                    storageType: vmStorageType,
-                    storageSize: vmStorageSize,
-                    networkSpeed: vmNetworkSpeed,
-                    operatingSystem: vmOperatingSystem,
-                    backupSize: vmBackupSize,
-                    additionalIp: vmAdditionalIp,
-                    snapshot: vmSnapshot,
-                    vpnSiteToSite: vmVpnSiteToSite,
-                    contractPeriod: vmContractPeriod
-                }
-            };
-
-            setAddedProducts(prev => [...prev, vmProduct]);
-            
-            // Mostrar mensagem de sucesso
-            alert(`VM "${vmName}" adicionada à proposta com sucesso! Você pode configurar e adicionar mais VMs ou ir para o resumo.`);
-            
-            // Limpar campos para permitir configurar nova VM (opcional)
-            // Mantém os valores para facilitar configuração de VMs similares
-            setVmName(`VM ${addedProducts.length + 2}`); // Incrementa o nome automaticamente
-        } else {
-            alert('Por favor, configure todos os campos obrigatórios da VM antes de adicionar à proposta.');
-        }
-    };
-
     // Função para remover produto da proposta
     const handleRemoveProduct = (productId: string) => {
         setAddedProducts(prev => prev.filter(p => p.id !== productId));
@@ -755,1122 +288,892 @@ const MaquinasVirtuaisCalculator: React.FC<MaquinasVirtuaisCalculatorProps> = ({
     const formatCurrency = (value: number) => `R$ ${value.toFixed(2).replace('.', ',')}`;
     const generateUniqueId = () => `_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Lógica de Produtos
-    const handleAddPabxProduct = () => {
-        if (pabxResult) {
-            let products = [];
+    // Função para adicionar VM à proposta
+    const handleAddVMProduct = () => {
+        if (vmName && vmCpuCores && vmRamGb && vmStorageSize) {
+            let description = `${vmName} - ${vmCpuCores} vCPU, ${vmRamGb}GB RAM, ${vmStorageSize}GB ${vmStorageType}, ${vmNetworkSpeed}, ${vmOperatingSystem}`;
+            
+            if (vmBackupSize > 0) {
+                description += `, Backup: ${vmBackupSize}GB`;
+            }
+            if (vmAdditionalIp) {
+                description += ', IP Adicional';
+            }
+            if (vmSnapshot) {
+                description += ', Snapshot';
+            }
+            if (vmVpnSiteToSite) {
+                description += ', VPN Site-to-Site';
+            }
 
-            // Produto PABX Principal
-            products.push({
+            const newProduct: ProposalItem = {
                 id: generateUniqueId(),
-                type: 'PABX',
-                description: `PABX em Nuvem para ${pabxExtensions} ramais`,
-                setup: pabxResult.setup,
-                monthly: pabxResult.baseMonthly,
-                details: { extensions: pabxExtensions }
-            });
+                name: vmName,
+                description,
+                unitPrice: vmFinalPrice,
+                quantity: 1,
+                setup: setupFeeGeneral,
+                monthly: vmFinalPrice,
+                details: { 
+                    type: 'VM',
+                    cpu: vmCpuCores,
+                    ram: vmRamGb,
+                    storage: `${vmStorageSize}GB ${vmStorageType}`,
+                    network: vmNetworkSpeed,
+                    os: vmOperatingSystem,
+                    backup: vmBackupSize,
+                    additionalIp: vmAdditionalIp,
+                    snapshot: vmSnapshot,
+                    vpnSiteToSite: vmVpnSiteToSite,
+                    contractPeriod: vmContractPeriod
+                }
+            };
 
-            // Produto Aluguel de Aparelhos
-            if (pabxIncludeDevices && pabxDeviceQuantity > 0 && pabxResult.deviceRentalCost > 0) {
-                products.push({
-                    id: generateUniqueId(),
-                    type: 'PABX',
-                    description: `Aluguel de ${pabxDeviceQuantity} aparelho(s) IP`,
-                    setup: 0,
-                    monthly: pabxResult.deviceRentalCost,
-                    details: { quantity: pabxDeviceQuantity }
-                });
-            }
+            setProposalItems([...proposalItems, newProduct]);
+            setAddedProducts([...addedProducts, newProduct]);
+            toast({ title: "Sucesso!", description: "VM adicionada à proposta." });
 
-            // Produto Agente IA
-            if (pabxResult && pabxResult.aiAgentCost > 0 && selectedAIAgentPlan) {
-                const plan = aiAgentPlans[selectedAIAgentPlan];
-                const description = `${plan.name} (Até: ${plan.messages.split(' ')[0]} msg, ${plan.minutes.split(' ')[0]} min, ${plan.premiumVoice.split(' ')[0]} voz premium)`;
-                products.push({
-                    id: generateUniqueId(),
-                    type: 'PABX',
-                    description: description,
-                    setup: 0,
-                    monthly: pabxResult.aiAgentCost,
-                    details: { plan: selectedAIAgentPlan }
-                });
-            }
-
-            setAddedProducts(prev => [...prev, ...products]);
+            // Reset form
+            setVmName('Servidor Principal');
+            setVmCpuCores(2);
+            setVmRamGb(4);
+            setVmStorageSize(50);
+            setVmBackupSize(0);
+            setVmAdditionalIp(false);
+            setVmSnapshot(false);
+            setVmVpnSiteToSite(false);
+        } else {
+            toast({ title: "Erro", description: "Preencha todos os campos obrigatórios.", variant: "destructive" });
         }
     };
-
-    const handleAddSipProduct = () => {
-        if (sipResult && selectedSipPlan) {
-            const plan = sipPlans.find(p => p.name === selectedSipPlan);
-            if (plan) {
-                const description = `${plan.name}${sipWithEquipment && plan.channels > 0 ? ' com equipamento' : ''}${sipAdditionalChannels > 0 ? ` + ${sipAdditionalChannels} canais adicionais` : ''}`;
-                setAddedProducts(prev => [...prev, {
-                    id: generateUniqueId(),
-                    type: 'SIP',
-                    description,
-                    setup: sipResult.setup,
-                    monthly: sipResult.monthly,
-                    details: { plan: selectedSipPlan, additionalChannels: sipAdditionalChannels, withEquipment: sipWithEquipment }
-                }]);
-            }
-        }
-    };
-
 
 
     // Lógica de Gerenciamento de Propostas
-    useEffect(() => {
-        const savedProposals = localStorage.getItem('proposals');
-        if (savedProposals) {
-            setProposals(JSON.parse(savedProposals));
-        }
-    }, []);
-
-    useEffect(() => {
-        if (proposals.length > 0) {
-            localStorage.setItem('proposals', JSON.stringify(proposals));
-        }
-    }, [proposals]);
-
     const totalSetup = addedProducts.reduce((sum, p) => sum + p.setup, 0);
     const totalMonthly = addedProducts.reduce((sum, p) => sum + p.monthly, 0);
 
-    const markupValue = useMemo(() => {
-        const baseCost = addedProducts.reduce((sum, p) => {
-            // Assumindo que o custo base pode ser derivado do preço mensal sem markup
-            // Esta é uma simplificação. O ideal seria ter o custo base armazenado no produto.
-            return sum + (p.monthly / (1 + markup / 100));
-        }, 0);
-        return totalMonthly - baseCost;
-    }, [addedProducts, totalMonthly, markup]);
-
-    const commissionValue = useMemo(() => {
-        return totalMonthly * (commissionPercentage / 100);
-    }, [totalMonthly, commissionPercentage]);
-
-    const generateProposalId = (): string => {
-        const now = new Date();
-        const year = now.getFullYear().toString().slice(-2);
-        const month = (now.getMonth() + 1).toString().padStart(2, '0');
-        const day = now.getDate().toString().padStart(2, '0');
-        const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-        return `PROP-${year}${month}${day}-${random}`;
+    const handlePrint = () => {
+        window.print();
     };
 
-    const clearForm = () => {
-        setClientName('');
-        setAccountManager('');
-        setAddedProducts([]);
-        setPabxExtensions(0);
-        setPabxIncludeDevices(false);
-        setPabxDeviceQuantity(0);
-        setIncludeAIAgent(false);
-        setSelectedAIAgentPlan('');
-        setSelectedSipPlan('');
-        setSipAdditionalChannels(0);
-        setSipWithEquipment(false);
-    };
+    const saveProposal = async () => {
+        if (!clientData.name || addedProducts.length === 0) {
+            toast({ title: "Erro de Validação", description: "Preencha o nome do cliente e adicione pelo menos um produto.", variant: "destructive" });
+            return;
+        }
 
-    const createNewProposal = () => {
-        // Limpar dados do formulário
-        setClientData({ name: '', email: '', phone: '' });
-        setAccountManagerData({ name: '', email: '', phone: '' });
-        setViewMode('client-form');
-    };
+        const proposalData: Proposal = {
+            id: currentProposal?.id || `prop_${Date.now()}`,
+            client: clientData,
+            accountManager: accountManagerData,
+            products: addedProducts,
+            totalSetup,
+            totalMonthly,
+            status: 'Salva',
+            type: 'VM',
+            createdAt: currentProposal?.createdAt || new Date().toISOString(),
+            userId: currentProposal?.userId || '',
+            userEmail: currentProposal?.userEmail || '',
+        };
 
-    const editProposal = (proposal: Proposal) => {
-        setCurrentProposal(proposal);
-        setClientName(proposal.clientName);
-        setAccountManager(proposal.accountManager);
-        setAddedProducts(proposal.products);
-        setViewMode('edit');
-    };
+        toast({ title: "Salvando...", description: "A sua proposta está sendo salva." });
 
-    const saveProposal = () => {
-        if (viewMode === 'create' || viewMode === 'edit') {
-            const proposalToSave: Proposal = {
-                ...(currentProposal as Proposal),
-                clientName,
-                accountManager,
-                products: addedProducts,
-                totalSetup,
-                totalMonthly,
-                date: currentProposal?.date || new Date().toLocaleDateString('pt-BR')
-            };
+        try {
+            const response = await fetch('/api/proposals', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                credentials: 'include',
+                body: JSON.stringify(proposalData),
+            });
 
-            if (viewMode === 'create') {
-                setProposals(prev => [...prev, proposalToSave]);
-            } else {
-                setProposals(prev => prev.map(p => p.id === proposalToSave.id ? proposalToSave : p));
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Falha ao salvar a proposta');
             }
 
+            toast({ title: "Sucesso!", description: "Proposta salva com sucesso." });
+            // Refresh proposals list after saving
+            const fetchProposalsAfterSave = async () => {
+                if (!token) return;
+                
+                try {
+                    const response = await fetch('/api/proposals', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                        },
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        setProposals(data);
+                    }
+                } catch (error) {
+                    console.error('Erro ao buscar propostas:', error);
+                }
+            };
+            await fetchProposalsAfterSave(); 
             setViewMode('search');
-            setCurrentProposal(null);
-            clearForm();
+        } catch (error: any) {
+            console.error('Erro ao salvar proposta:', error);
+            toast({ title: "Erro", description: error.message || "Não foi possível salvar a proposta.", variant: "destructive" });
         }
     };
 
-    const cancelAction = () => {
-        setViewMode('search');
-        setCurrentProposal(null);
-        clearForm();
-    };
-
-    const filteredProposals = (proposals || []).filter(p =>
-        p.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.id.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredProposals = proposals.filter(p =>
+        (p.clientData?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (p.id?.toString() || '').includes(searchTerm)
     );
 
-    const handlePrint = () => window.print();
+    const handleSelectProposal = (proposal: Proposal) => {
+        if (proposal) {
+            setCurrentProposal(proposal);
+            setAddedProducts(proposal.proposalItems || []);
+            setClientData(proposal.clientData || { name: '', email: '', phone: '' });
+            setAccountManagerData(proposal.accountManagerData || { name: '', email: '', phone: '' });
+            setViewMode('calculator');
+        }
+    };
 
-    // Se estiver na tela de formulário do cliente, mostrar o formulário
-    if (viewMode === 'client-form') {
+    const handleNewProposal = () => {
+        setCurrentProposal(null);
+        setClientData({ name: '', email: '', phone: '' });
+        setAccountManagerData({ name: '', email: '', phone: '' });
+        setAddedProducts([]);
+        setViewMode('client-form');
+    };
+
+    if (viewMode === 'search') {
         return (
-            <ClientManagerForm
-                clientData={clientData}
-                accountManagerData={accountManagerData}
-                onClientDataChange={setClientData}
-                onAccountManagerDataChange={setAccountManagerData}
+            <Card className="w-full max-w-4xl mx-auto">
+                <CardHeader>
+                    <CardTitle>Buscar Proposta de VM</CardTitle>
+                    <CardDescription>Busque por propostas existentes pelo nome do cliente ou ID.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex gap-2 mb-4">
+                        <Input 
+                            placeholder="Buscar por cliente ou ID..." 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                        <Button onClick={() => setSearchTerm('')}><Search className="h-4 w-4 mr-2" /> Limpar</Button>
+                        <Button onClick={handleNewProposal}><Plus className="h-4 w-4 mr-2" /> Nova Proposta</Button>
+                    </div>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>ID</TableHead>
+                                <TableHead>Cliente</TableHead>
+                                <TableHead>Data</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Total Mensal</TableHead>
+                                <TableHead>Ações</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredProposals.map((proposal) => (
+                                <TableRow key={proposal.id}>
+                                    <TableCell>{proposal.id}</TableCell>
+                                    <TableCell>{proposal.clientData?.name}</TableCell>
+                                    <TableCell>{new Date(proposal.createdAt || '').toLocaleDateString()}</TableCell>
+                                    <TableCell>{proposal.status}</TableCell>
+                                    <TableCell>{formatCurrency(proposal.totalMonthly)}</TableCell>
+                                    <TableCell>
+                                        <Button variant="outline" size="sm" onClick={() => handleSelectProposal(proposal)}>
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        );
+    } else if (viewMode === 'client-form') {
+        return (
+            <ClientManagerForm 
+                clientData={clientData} 
+                onClientDataChange={setClientData} 
+                accountManagerData={accountManagerData} 
+                onAccountManagerDataChange={setAccountManagerData} 
+                onContinue={() => setViewMode('calculator')} 
                 onBack={() => setViewMode('search')}
-                onContinue={() => setViewMode('calculator')}
-                title="Nova Proposta - Máquinas Virtuais"
-                subtitle="Preencha os dados do cliente e gerente de contas para continuar."
             />
         );
-    }
-
-    return (
-        <>
-            <div className="p-4 md:p-8 print-hide">
-                {viewMode === 'search' ? (
-                    <Card className="bg-slate-900/80 border-slate-800 text-white">
-                        <CardHeader>
-                            <CardTitle>Buscar Propostas</CardTitle>
-                            <CardDescription>Encontre propostas existentes ou crie uma nova.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex gap-4 mb-4">
-                                <Input
-                                    type="text"
-                                    placeholder="Buscar por cliente ou ID..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="bg-slate-800 border-slate-700 text-white"
-                                />
-                                <Button onClick={createNewProposal} className="bg-blue-600 hover:bg-blue-700"><Plus className="h-4 w-4 mr-2" />Nova Proposta</Button>
-                            </div>
-                            <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow className="border-slate-700">
-                                            <TableHead className="text-white">ID</TableHead>
-                                            <TableHead className="text-white">Cliente</TableHead>
-                                            <TableHead className="text-white">Data</TableHead>
-                                            <TableHead className="text-white">Total Mensal</TableHead>
-                                            <TableHead className="text-white">Ações</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {filteredProposals.map(p => (
-                                            <TableRow key={p.id} className="border-slate-800">
-                                                <TableCell>{p.id}</TableCell>
-                                                <TableCell>{p.clientName}</TableCell>
-                                                <TableCell>{p.date}</TableCell>
-                                                <TableCell>{formatCurrency(p.totalMonthly)}</TableCell>
-                                                <TableCell><Button variant="outline" size="sm" onClick={() => editProposal(p)}><Edit className="h-4 w-4" /></Button></TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    <>
-                        <div className="mb-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <div>
-                                    <h1 className="text-3xl font-bold text-white">Calculadora de Máquinas Virtuais</h1>
-                                    <p className="text-slate-400 mt-2">Configure e calcule os custos para VMs na nuvem</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    {onBackToPanel && (
-                                        <Button
-                                            variant="outline"
-                                            onClick={onBackToPanel}
-                                            className="border-slate-600 text-slate-300 hover:bg-slate-700"
-                                        >
-                                            ← Voltar ao Painel
-                                        </Button>
-                                    )}
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => setViewMode('search')}
-                                        className="border-slate-600 text-slate-300 hover:bg-slate-700"
-                                    >
-                                        ← Voltar para Buscar
-                                    </Button>
-                                </div>
-                            </div>
-                            
-                            {/* Informações do Cliente e Gerente */}
-                            <ClientManagerInfo 
-                                clientData={clientData}
-                                accountManagerData={accountManagerData}
-                            />
-                        </div>
-
+    } else { // viewMode === 'calculator'
+        return (
+            <div className="w-full p-4 md:p-6 print-container">
+                <Card className="w-full max-w-6xl mx-auto print-content">
+                    <CardHeader className="flex flex-row items-center justify-between print-header">
                         <div>
-                            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                                <TabsList className={`grid w-full ${userRole === 'admin' ? 'grid-cols-3' : 'grid-cols-2'} bg-slate-800`}>
-                                    <TabsTrigger value="calculator">Calculadora VM</TabsTrigger>
-                                    {userRole === 'admin' && <TabsTrigger value="list-price">Tabela de Preços VM/Configurações</TabsTrigger>}
-                                    <TabsTrigger value="proposal">Resumo da Proposta</TabsTrigger>
-                                </TabsList>
-                                <TabsContent value="calculator">
-                                    <div className="mt-6">
-                                        {/* Configurar Máquina Virtual */}
-                                        <Card className="bg-slate-900/80 border-slate-800 text-white">
+                            <CardTitle className="text-2xl font-bold">Calculadora de Máquinas Virtuais</CardTitle>
+                            <CardDescription>Configure e gere propostas para VMs.</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2 no-print">
+                            <Button onClick={() => setViewMode('search')} variant="outline">Voltar para Busca</Button>
+                            <Button onClick={handlePrint}><Download className="h-4 w-4 mr-2" /> Baixar PDF</Button>
+                            <Button onClick={saveProposal}><Save className="h-4 w-4 mr-2" /> Salvar Proposta</Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <ClientManagerInfo 
+                            clientData={clientData} 
+                            accountManagerData={accountManagerData} 
+                        />
+                        <Separator className="my-6" />
+                        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                            <TabsList className="grid w-full grid-cols-3 no-print">
+                                <TabsTrigger value="calculator"> <Calculator className="h-4 w-4 mr-2" />Calculadora</TabsTrigger>
+                                <TabsTrigger value="configurations"> <Settings className="h-4 w-4 mr-2" />Configurações/Lista de Preços</TabsTrigger>
+                                <TabsTrigger value="proposal"> <FileText className="h-4 w-4 mr-2" />Resumo da Proposta</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="calculator">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+                                    {/* Coluna de Configuração da VM */}
+                                    <div className="space-y-6">
+                                        <Card>
                                             <CardHeader>
-                                                <div className="flex justify-between items-center">
-                                                    <CardTitle className="text-cyan-400 flex items-center gap-2">
-                                                        <Server className="h-5 w-5" />
-                                                        Configurar Máquina Virtual
-                                                    </CardTitle>
-                                                    <div className="flex gap-2">
-                                                        <Button variant="outline" className="bg-blue-600 text-white border-blue-600">
-                                                            <Brain className="h-4 w-4 mr-2" />
-                                                            Sugestão IA
-                                                        </Button>
-                                                        <Button variant="outline" className="bg-blue-600 text-white border-blue-600">
-                                                            <Plus className="h-4 w-4 mr-2" />
-                                                            Adicionar à Proposta
-                                                        </Button>
-                                                    </div>
-                                                </div>
+                                                <CardTitle className="flex items-center text-cyan-400"><Server className="mr-2 h-5 w-5"/>Configurar Máquina Virtual</CardTitle>
                                             </CardHeader>
-                                            <CardContent className="space-y-6">
-                                                {/* Nome da VM */}
-                                                <div>
-                                                    <Label className="flex items-center gap-2 mb-2">
-                                                        <Edit className="h-4 w-4" />
-                                                        Nome da VM
-                                                    </Label>
-                                                    <Input 
-                                                        value={vmName} 
-                                                        onChange={(e) => setVmName(e.target.value)}
-                                                        className="bg-slate-800 border-slate-700 text-white" 
-                                                    />
+                                            <CardContent className="space-y-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="vm-name" className="flex items-center"><Edit className="mr-2 h-4 w-4"/>Nome da VM</Label>
+                                                    <Input id="vm-name" value={vmName} onChange={(e) => setVmName(e.target.value)} placeholder="Servidor Principal" className="bg-gray-800 border-gray-600" />
                                                 </div>
-
-                                                {/* vCPU Cores e Memória RAM */}
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                    <div>
-                                                        <Label className="flex items-center gap-2 mb-2">
-                                                            <Cpu className="h-4 w-4" />
-                                                            vCPU Cores
-                                                        </Label>
-                                                        <Input 
-                                                            type="number" 
-                                                            value={vmCpuCores} 
-                                                            onChange={(e) => setVmCpuCores(Number(e.target.value))}
-                                                            className="bg-slate-800 border-slate-700 text-white" 
-                                                        />
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="vm-cpu" className="flex items-center"><Cpu className="mr-2 h-4 w-4"/>vCPU Cores</Label>
+                                                        <Input id="vm-cpu" type="number" value={vmCpuCores} onChange={(e) => setVmCpuCores(Number(e.target.value))} min={1} className="bg-gray-800 border-gray-600" />
                                                     </div>
-                                                    <div>
-                                                        <Label className="flex items-center gap-2 mb-2">
-                                                            <MemoryStick className="h-4 w-4" />
-                                                            Memória RAM (GB)
-                                                        </Label>
-                                                        <Input 
-                                                            type="number" 
-                                                            value={vmRamGb} 
-                                                            onChange={(e) => setVmRamGb(Number(e.target.value))}
-                                                            className="bg-slate-800 border-slate-700 text-white" 
-                                                        />
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="vm-ram" className="flex items-center"><MemoryStick className="mr-2 h-4 w-4"/>Memória RAM (GB)</Label>
+                                                        <Input id="vm-ram" type="number" value={vmRamGb} onChange={(e) => setVmRamGb(Number(e.target.value))} min={1} className="bg-gray-800 border-gray-600" />
                                                     </div>
                                                 </div>
-
-                                                {/* Tipo de Armazenamento */}
-                                                <div>
-                                                    <Label className="flex items-center gap-2 mb-2">
-                                                        <HardDrive className="h-4 w-4" />
-                                                        Tipo de Armazenamento
-                                                    </Label>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="vm-storage-type" className="flex items-center"><HardDrive className="mr-2 h-4 w-4"/>Tipo de Armazenamento</Label>
                                                     <Select value={vmStorageType} onValueChange={setVmStorageType}>
-                                                        <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent className="bg-slate-800 text-white">
+                                                        <SelectTrigger className="bg-gray-800 border-gray-600"><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
                                                             <SelectItem value="HDD SAS">HDD SAS</SelectItem>
                                                             <SelectItem value="SSD Performance">SSD Performance</SelectItem>
                                                             <SelectItem value="NVMe">NVMe</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
-
-                                                {/* Armazenamento */}
-                                                <div>
-                                                    <Label className="flex items-center gap-2 mb-2">
-                                                        <HardDrive className="h-4 w-4" />
-                                                        Armazenamento {vmStorageType} (GB)
-                                                    </Label>
-                                                    <Input 
-                                                        type="number" 
-                                                        value={vmStorageSize} 
-                                                        onChange={(e) => setVmStorageSize(Number(e.target.value))}
-                                                        className="bg-slate-800 border-slate-700 text-white" 
-                                                    />
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="vm-storage-size" className="flex items-center"><HardDrive className="mr-2 h-4 w-4"/>Armazenamento {vmStorageType} (GB)</Label>
+                                                    <Input id="vm-storage-size" type="number" value={vmStorageSize} onChange={(e) => setVmStorageSize(Number(e.target.value))} min={10} className="bg-gray-800 border-gray-600" />
                                                 </div>
-
-                                                {/* Placa de Rede */}
-                                                <div>
-                                                    <Label className="flex items-center gap-2 mb-2">
-                                                        <Network className="h-4 w-4" />
-                                                        Placa de Rede
-                                                    </Label>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="vm-network" className="flex items-center"><Network className="mr-2 h-4 w-4"/>Placa de Rede</Label>
                                                     <Select value={vmNetworkSpeed} onValueChange={setVmNetworkSpeed}>
-                                                        <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent className="bg-slate-800 text-white">
+                                                        <SelectTrigger className="bg-gray-800 border-gray-600"><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
                                                             <SelectItem value="1 Gbps">1 Gbps</SelectItem>
                                                             <SelectItem value="10 Gbps">10 Gbps</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
-
-                                                {/* Sistema Operacional */}
-                                                <div>
-                                                    <Label className="flex items-center gap-2 mb-2">
-                                                        <Settings className="h-4 w-4" />
-                                                        Sistema Operacional
-                                                    </Label>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="vm-os" className="flex items-center"><Monitor className="mr-2 h-4 w-4"/>Sistema Operacional</Label>
                                                     <Select value={vmOperatingSystem} onValueChange={setVmOperatingSystem}>
-                                                        <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent className="bg-slate-800 text-white">
+                                                        <SelectTrigger className="bg-gray-800 border-gray-600"><SelectValue /></SelectTrigger>
+                                                        <SelectContent>
                                                             <SelectItem value="Ubuntu Server 22.04 LTS">Ubuntu Server 22.04 LTS</SelectItem>
+                                                            <SelectItem value="Debian 12">Debian 12</SelectItem>
+                                                            <SelectItem value="CentOS Stream 9">CentOS Stream 9</SelectItem>
+                                                            <SelectItem value="Rocky Linux 9">Rocky Linux 9</SelectItem>
                                                             <SelectItem value="Windows Server 2022 Standard">Windows Server 2022 Standard</SelectItem>
                                                             <SelectItem value="Windows 10 Pro">Windows 10 Pro</SelectItem>
-                                                            <SelectItem value="CentOS Stream 9">CentOS Stream 9</SelectItem>
-                                                            <SelectItem value="Debian 12">Debian 12</SelectItem>
-                                                            <SelectItem value="Rocky Linux 9">Rocky Linux 9</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
+                                            </CardContent>
+                                        </Card>
 
-                                                {/* Serviços Adicionais */}
-                                                <div>
-                                                    <h3 className="text-cyan-400 text-lg font-semibold mb-4">Serviços Adicionais</h3>
-                                                    
-                                                    {/* Backup em Bloco */}
-                                                    <div className="mb-4">
-                                                        <Label className="mb-2 block">
-                                                            Backup em Bloco: <span className="text-cyan-400">{vmBackupSize} GB</span>
-                                                        </Label>
-                                                        <Input 
-                                                            type="number" 
-                                                            value={vmBackupSize} 
-                                                            onChange={(e) => setVmBackupSize(Number(e.target.value))}
-                                                            className="bg-slate-800 border-slate-700 text-white" 
-                                                            placeholder="0"
-                                                        />
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle className="flex items-center text-cyan-400">Serviços Adicionais</CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="space-y-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="vm-backup">Backup em Bloco: <span className="text-cyan-400">{vmBackupSize} GB</span></Label>
+                                                    <Input id="vm-backup" type="number" value={vmBackupSize} onChange={(e) => setVmBackupSize(Number(e.target.value))} min={0} className="bg-gray-800 border-gray-600" />
+                                                </div>
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center space-x-2">
+                                                        <Checkbox id="vm-ip" checked={vmAdditionalIp} onCheckedChange={(checked) => setVmAdditionalIp(Boolean(checked))} className="border-gray-600" />
+                                                        <Label htmlFor="vm-ip">IP Adicional</Label>
                                                     </div>
-
-                                                    {/* Checkboxes para serviços adicionais */}
-                                                    <div className="space-y-3">
-                                                        <div className="flex items-center space-x-2">
-                                                            <Checkbox 
-                                                                id="vmAdditionalIp" 
-                                                                checked={vmAdditionalIp} 
-                                                                onCheckedChange={(checked) => setVmAdditionalIp(Boolean(checked))}
-                                                                className="border-cyan-400"
-                                                            />
-                                                            <Label htmlFor="vmAdditionalIp" className="text-white">IP Adicional</Label>
-                                                        </div>
-                                                        <div className="flex items-center space-x-2">
-                                                            <Checkbox 
-                                                                id="vmSnapshot" 
-                                                                checked={vmSnapshot} 
-                                                                onCheckedChange={(checked) => setVmSnapshot(Boolean(checked))}
-                                                                className="border-cyan-400"
-                                                            />
-                                                            <Label htmlFor="vmSnapshot" className="text-white">Snapshot Adicional</Label>
-                                                        </div>
-                                                        <div className="flex items-center space-x-2">
-                                                            <Checkbox 
-                                                                id="vmVpnSiteToSite" 
-                                                                checked={vmVpnSiteToSite} 
-                                                                onCheckedChange={(checked) => setVmVpnSiteToSite(Boolean(checked))}
-                                                                className="border-cyan-400"
-                                                            />
-                                                            <Label htmlFor="vmVpnSiteToSite" className="text-white">VPN Site-to-Site</Label>
-                                                        </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <Checkbox id="vm-snapshot" checked={vmSnapshot} onCheckedChange={(checked) => setVmSnapshot(Boolean(checked))} className="border-gray-600" />
+                                                        <Label htmlFor="vm-snapshot">Snapshot Adicional</Label>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <Checkbox id="vm-vpn" checked={vmVpnSiteToSite} onCheckedChange={(checked) => setVmVpnSiteToSite(Boolean(checked))} className="border-gray-600" />
+                                                        <Label htmlFor="vm-vpn">VPN Site-to-Site</Label>
                                                     </div>
                                                 </div>
                                             </CardContent>
                                         </Card>
+                                    </div>
 
-                                        {/* Período Contratual */}
-                                        <Card className="bg-slate-900/80 border-slate-800 text-white">
-                                            <CardHeader>
-                                                <CardTitle className="flex items-center gap-2">
-                                                    <Settings className="h-5 w-5" />
-                                                    <span className="text-cyan-400">Período Contratual</span>
-                                                </CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="space-y-4">
-                                                    <div>
-                                                        <Label className="text-white mb-3 block">Selecione o período de contrato:</Label>
-                                                        <div className="grid grid-cols-5 gap-3">
-                                                            {[12, 24, 36, 48, 60].map((months) => (
+                                    {/* Coluna de Custos e Preços */}
+                                    <div className="space-y-6">
+                                        {/* VM Summary Card */}
+                                        {proposalItems.length > 0 && (
+                                            <Card className="bg-gray-900 border-gray-700">
+                                                <CardHeader>
+                                                    <CardTitle className="flex items-center text-cyan-400"><Server className="mr-2 h-5 w-5"/>Máquinas Virtuais ({proposalItems.length})</CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="space-y-4">
+                                                    {proposalItems.map((item, index) => (
+                                                        <div key={index} className="p-4 bg-gray-800 rounded-lg border border-gray-600">
+                                                            <div className="flex justify-between items-start mb-2">
+                                                                <h4 className="font-semibold text-white">{item.name} (#{index + 1})</h4>
                                                                 <Button
-                                                                    key={months}
-                                                                    variant={vmContractPeriod === months ? "default" : "outline"}
-                                                                    className={`${
-                                                                        vmContractPeriod === months 
-                                                                            ? "bg-cyan-600 text-white border-cyan-600" 
-                                                                            : "bg-slate-800 text-white border-slate-600 hover:bg-slate-700"
-                                                                    }`}
-                                                                    onClick={() => setVmContractPeriod(months)}
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => {
+                                                                        const newItems = proposalItems.filter((_, i) => i !== index);
+                                                                        setProposalItems(newItems);
+                                                                    }}
+                                                                    className="text-red-400 border-red-400 hover:bg-red-400 hover:text-white"
                                                                 >
-                                                                    {months} meses
+                                                                    <Trash2 className="h-4 w-4" />
                                                                 </Button>
-                                                            ))}
+                                                            </div>
+                                                            <div className="text-sm text-gray-300 space-y-1">
+                                                                <p>{item.description}</p>
+                                                                <p><strong>Placa de rede:</strong> {vmNetworkSpeed}</p>
+                                                                <p><strong>Backup:</strong> {vmBackupSize} GB</p>
+                                                                <p><strong>IP Adicional:</strong> {vmAdditionalIp ? 'Sim' : 'Não'}</p>
+                                                                <p><strong>Snapshot Adicional:</strong> {vmSnapshot ? 'Sim' : 'Não'}</p>
+                                                                <p><strong>VPN Site-to-Site:</strong> {vmVpnSiteToSite ? 'Sim' : 'Não'}</p>
+                                                            </div>
+                                                            <div className="mt-3 space-y-1">
+                                                                <p className="text-gray-400 line-through">Mensal s/ Desc: {formatCurrency(item.unitPrice / (1 - contractDiscount / 100))}</p>
+                                                                <p className="text-cyan-400">Mensal c/ Desc: {formatCurrency(item.unitPrice)}</p>
+                                                                <p className="text-yellow-400 font-semibold">Total 12m: {formatCurrency(item.unitPrice * 12)}</p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </CardContent>
+                                            </Card>
+                                        )}
+
+                                        {/* Investment Summary */}
+                                        {proposalItems.length > 0 && (
+                                            <Card className="bg-gray-900 border-gray-700">
+                                                <CardHeader>
+                                                    <CardTitle className="flex items-center text-cyan-400">Resumo do Investimento</CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="space-y-4">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-gray-300">Subtotal Mensal</span>
+                                                        <span className="text-white font-semibold">{formatCurrency(totalMonthly)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-gray-300">Desconto ({vmContractPeriod} Meses)</span>
+                                                        <span className="text-green-400">- {formatCurrency(totalMonthly * contractDiscount / 100)} ({contractDiscount}%)</span>
+                                                    </div>
+                                                    <Separator className="bg-gray-600" />
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div className="space-y-2">
+                                                            <h4 className="text-white font-semibold">Taxa de Setup</h4>
+                                                            <p className="text-2xl font-bold text-white">{formatCurrency(setupFeeGeneral)}</p>
+                                                        </div>
+                                                        <div className="space-y-2 text-right">
+                                                            <h4 className="text-cyan-400 font-semibold">Total Mensal</h4>
+                                                            <p className="text-2xl font-bold text-cyan-400">{formatCurrency(totalMonthly * (1 - contractDiscount / 100))}</p>
                                                         </div>
                                                     </div>
-                                                    <div className="text-sm text-slate-400">
-                                                        Período selecionado: <span className="text-cyan-400 font-semibold">{vmContractPeriod} meses</span>
+                                                    <div className="mt-4 space-y-2">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-cyan-400 font-semibold">Gestão e Suporte (Mensal)</span>
+                                                            <span className="text-white font-semibold">{formatCurrency(monthlySupportCost)}</span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center text-sm">
+                                                            <span className="text-gray-400">Total Gestão e Suporte ({vmContractPeriod} meses)</span>
+                                                            <span className="text-gray-300">{formatCurrency(monthlySupportCost * vmContractPeriod)}</span>
+                                                        </div>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        )}
+
+                                        {/* Contract Total */}
+                                        {proposalItems.length > 0 && (
+                                            <Card className="bg-gradient-to-r from-yellow-600 to-yellow-500 border-yellow-400">
+                                                <CardContent className="p-6">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center">
+                                                            <Calculator className="h-6 w-6 mr-3 text-yellow-900" />
+                                                            <span className="text-yellow-900 font-semibold">Valor Total do Contrato</span>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-3xl font-bold text-yellow-900">{formatCurrency((totalMonthly * (1 - contractDiscount / 100) + monthlySupportCost) * vmContractPeriod)}</p>
+                                                            <p className="text-sm text-yellow-800">({vmContractPeriod} meses)</p>
+                                                        </div>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        )}
+
+                                        {/* Commercial Conditions */}
+                                        <Card className="bg-gray-900 border-gray-700">
+                                            <CardHeader>
+                                                <CardTitle className="flex items-center text-cyan-400"><Calculator className="mr-2 h-5 w-5"/>Condições Comerciais</CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <div className="space-y-3">
+                                                    <h4 className="text-white font-semibold">Prazo Contratual</h4>
+                                                    <div className="grid grid-cols-5 gap-2">
+                                                        {[12, 24, 36, 48, 60].map((months) => (
+                                                            <Button
+                                                                key={months}
+                                                                variant={vmContractPeriod === months ? "default" : "outline"}
+                                                                onClick={() => setVmContractPeriod(months)}
+                                                                className={`${vmContractPeriod === months ? 'bg-blue-600 text-white' : 'bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700'}`}
+                                                            >
+                                                                {months} Meses
+                                                            </Button>
+                                                        ))}
                                                     </div>
                                                 </div>
                                             </CardContent>
                                         </Card>
 
-                                        {/* Resultado do Cálculo da VM */}
-                                        <Card className="bg-slate-900/80 border-slate-800 text-white">
-                                            <CardHeader>
-                                                <CardTitle className="flex items-center">
-                                                    <Calculator className="mr-2" />
-                                                    Resultado da Configuração
-                                                </CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
+                                        {/* Add VM Button */}
+                                        <Card className="bg-gray-900 border-gray-700">
+                                            <CardContent className="p-4">
                                                 <div className="space-y-4">
+                                                    <div className="p-4 bg-gray-800 rounded-lg">
+                                                        <h4 className="font-semibold text-lg text-white mb-2">Custo Mensal da VM: {formatCurrency(vmFinalPrice)}</h4>
+                                                        <p className="text-sm text-gray-400">Custo base: {formatCurrency(calculateVMCost)}</p>
+                                                        <p className="text-sm text-gray-400">Desconto contratual: {contractDiscount}%</p>
+                                                    </div>
                                                     <div className="grid grid-cols-2 gap-4">
-                                                        <div>
-                                                            <Label className="text-cyan-400">Resumo da VM:</Label>
-                                                            <div className="text-sm space-y-1 mt-2">
-                                                                <div>Nome: {vmName}</div>
-                                                                <div>vCPU: {vmCpuCores} cores</div>
-                                                                <div>RAM: {vmRamGb} GB</div>
-                                                                <div>Armazenamento: {vmStorageSize} GB {vmStorageType}</div>
-                                                                <div>Rede: {vmNetworkSpeed}</div>
-                                                                <div>OS: {vmOperatingSystem}</div>
-                                                                <div>Contrato: {vmContractPeriod} meses</div>
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <Label className="text-cyan-400">Serviços Adicionais:</Label>
-                                                            <div className="text-sm space-y-1 mt-2">
-                                                                {vmBackupSize > 0 && <div>Backup: {vmBackupSize} GB</div>}
-                                                                {vmAdditionalIp && <div>IP Adicional</div>}
-                                                                {vmSnapshot && <div>Snapshot Adicional</div>}
-                                                                {vmVpnSiteToSite && <div>VPN Site-to-Site</div>}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                            <CardFooter className="flex-col items-start">
-                                                <div className="w-full">
-                                                    <Separator className="bg-slate-700 my-4" />
-                                                    <div className="text-lg font-bold mb-2">Cálculo de Preços:</div>
-                                                    <div className="space-y-2">
-                                                        <div className="flex justify-between"><span>Custo Base:</span> <span>{formatCurrency(calculateVMCost)}</span></div>
-                                                        <div className="flex justify-between"><span>Impostos ({totalTaxes.toFixed(2)}%):</span> <span>{formatCurrency(calculateVMCost * (totalTaxes / 100))}</span></div>
-                                                        <div className="flex justify-between"><span>Lucro (Margem de {estimatedNetMargin.toFixed(2)}%):</span> <span>{formatCurrency((calculateVMCost + calculateVMCost * (totalTaxes / 100)) * (markup / 100))}</span></div>
-                                                        {contractDiscount > 0 && (
-                                                            <div className="flex justify-between text-orange-400"><span>Desconto Contrato ({contractDiscount}%):</span> <span>-{formatCurrency(((calculateVMCost + calculateVMCost * (totalTaxes / 100)) * (1 + markup / 100)) * (contractDiscount / 100))}</span></div>
-                                                        )}
-                                                        <div className="flex justify-between"><span>Taxa de Setup:</span> <span>R$ {setupFee.toFixed(2)}</span></div>
-                                                        <div className="flex justify-between text-yellow-400"><span>Comissão ({commissionPercentage}%):</span> <span>{formatCurrency(vmFinalPrice * (commissionPercentage / 100))}</span></div>
-                                                        <Separator className="bg-slate-700 my-2" />
-                                                        <div className="flex justify-between text-green-400 font-bold text-lg">
-                                                            <span>Total Mensal:</span> 
-                                                            <span>{formatCurrency(vmFinalPrice)}</span>
-                                                        </div>
-                                                        {contractDiscount > 0 && (
-                                                            <div className="text-sm text-orange-400 mt-2">
-                                                                💰 Desconto de {contractDiscount}% aplicado por contrato de {vmContractPeriod} meses
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="space-y-2 mt-4">
-                                                        <Button 
-                                                            className="w-full bg-green-600 hover:bg-green-700"
-                                                            onClick={handleAddVMProduct}
-                                                        >
-                                                            Adicionar à Proposta
+                                                        <Button variant="outline" className="bg-blue-600 text-white border-blue-600 hover:bg-blue-700">
+                                                            <Brain className="h-4 w-4 mr-2" />Sugestão IA
                                                         </Button>
-                                                        {addedProducts.length > 0 && (
-                                                            <Button 
-                                                                variant="outline"
-                                                                className="w-full bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
-                                                                onClick={() => setActiveTab('proposal')}
-                                                            >
-                                                                Ver Resumo da Proposta ({addedProducts.length} {addedProducts.length === 1 ? 'item' : 'itens'})
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </CardFooter>
-                                        </Card>
-                                    </div>
-                                </TabsContent>
-                                {userRole === 'admin' && (
-                                <TabsContent value="list-price">
-                                    <div className="space-y-6 mt-6">
-                                        {/* Tributos */}
-                                        <Card className="bg-slate-900/80 border-slate-800 text-white">
-                                            <CardHeader>
-                                                <CardTitle className="flex items-center gap-2">
-                                                    <Calculator className="h-5 w-5" />
-                                                    Tributos
-                                                </CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="flex gap-4 mb-6">
-                                                    <Button 
-                                                        variant="outline" 
-                                                        className={selectedTaxRegime === 'lucro_real' ? "bg-blue-600 text-white border-blue-600" : "bg-slate-700 text-white border-slate-600"}
-                                                        onClick={() => handleTaxRegimeChange('lucro_real')}
-                                                    >
-                                                        Lucro Real
-                                                    </Button>
-                                                    <Button 
-                                                        variant="outline" 
-                                                        className={selectedTaxRegime === 'lucro_presumido' ? "bg-blue-600 text-white border-blue-600" : "bg-slate-700 text-white border-slate-600"}
-                                                        onClick={() => handleTaxRegimeChange('lucro_presumido')}
-                                                    >
-                                                        Lucro Presumido
-                                                    </Button>
-                                                    <Button 
-                                                        variant="outline" 
-                                                        className={selectedTaxRegime === 'lucro_real_reduzido' ? "bg-blue-600 text-white border-blue-600" : "bg-slate-700 text-white border-slate-600"}
-                                                        onClick={() => handleTaxRegimeChange('lucro_real_reduzido')}
-                                                    >
-                                                        Lucro Real Reduzido
-                                                    </Button>
-                                                    <Button 
-                                                        variant="outline" 
-                                                        className={selectedTaxRegime === 'simples_nacional' ? "bg-blue-600 text-white border-blue-600" : "bg-slate-700 text-white border-slate-600"}
-                                                        onClick={() => handleTaxRegimeChange('simples_nacional')}
-                                                    >
-                                                        Simples Nacional
-                                                    </Button>
-                                                </div>
-                                                <div className="grid grid-cols-3 gap-6">
-                                                    <div>
-                                                        <Label>PIS/COFINS (%)</Label>
-                                                        <Input 
-                                                            value={pisCofins} 
-                                                            onChange={(e) => setPisCofins(e.target.value)}
-                                                            className="bg-slate-800 border-slate-700" 
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <Label>ISS (%)</Label>
-                                                        <Input 
-                                                            value={iss} 
-                                                            onChange={(e) => setIss(e.target.value)}
-                                                            className="bg-slate-800 border-slate-700" 
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <Label>CSLL/IR (%)</Label>
-                                                        <Input 
-                                                            value={csllIr} 
-                                                            onChange={(e) => setCsllIr(e.target.value)}
-                                                            className="bg-slate-800 border-slate-700" 
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="mt-4 text-center text-cyan-400 text-lg font-semibold">
-                                                    Total de Impostos do Regime Selecionado: {totalTaxes.toFixed(2).replace('.', ',')}%
-                                                </div>
-                                                <p className="text-sm text-slate-400 mt-2">
-                                                    Edite os impostos de cada regime tributário. Os valores são percentuais e aceitam até 2 casas decimais.
-                                                </p>
-                                            </CardContent>
-                                        </Card>
-
-                                        {/* Markup e Margem Líquida */}
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                            <Card className="bg-slate-900/80 border-slate-800 text-white">
-                                                <CardHeader>
-                                                    <CardTitle className="text-cyan-400">Markup e Margem Líquida</CardTitle>
-                                                </CardHeader>
-                                                <CardContent>
-                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                                        <div>
-                                                            <Label htmlFor="markup-cost">Markup (%)</Label>
-                                                            <Input 
-                                                                id="markup-cost"
-                                                                type="number" 
-                                                                value={markup}
-                                                                onChange={(e) => setMarkup(parseFloat(e.target.value) || 0)}
-                                                                className="bg-slate-800 border-slate-700" 
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <Label htmlFor="commission-percentage">Comissão (%)</Label>
-                                                            <Input 
-                                                                id="commission-percentage"
-                                                                type="number" 
-                                                                value={commissionPercentage}
-                                                                onChange={(e) => setCommissionPercentage(parseFloat(e.target.value) || 0)}
-                                                                className="bg-slate-800 border-slate-700" 
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <Label htmlFor="estimated-net-margin">Margem Líquida (%)</Label>
-                                                            <Input 
-                                                                id="estimated-net-margin" 
-                                                                type="number" 
-                                                                value={estimatedNetMargin.toFixed(2)} 
-                                                                readOnly 
-                                                                className="bg-slate-800 border-slate-700 text-white cursor-not-allowed" 
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <Separator className="my-4 bg-slate-700" />
-                                                    <div className="space-y-2 text-sm">
-                                                        <div className="flex justify-between font-semibold text-green-500">
-                                                            <span>Valor do Markup</span>
-                                                            <span>{formatCurrency(markupValue)}</span>
-                                                        </div>
-                                                        <div className="flex justify-between font-semibold text-orange-500">
-                                                            <span>Valor da Comissão</span>
-                                                            <span>{formatCurrency(commissionValue)}</span>
-                                                        </div>
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-
-                                        </div>
-
-                                        {/* Recursos Base (Custos) */}
-                                        <Card className="bg-slate-900/80 border-slate-800 text-white">
-                                            <CardHeader>
-                                                <CardTitle className="text-cyan-400">Recursos Base (Custos)</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                                    <div>
-                                                        <h4 className="text-cyan-400 mb-4">vCPU Windows (por core)</h4>
-                                                        <div>
-                                                            <Label>Custo Mensal</Label>
-                                                            <Input defaultValue="45,5" className="bg-slate-800 border-slate-700" />
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="text-cyan-400 mb-4">vCPU Linux (por core)</h4>
-                                                        <div>
-                                                            <Label>Custo Mensal</Label>
-                                                            <Input defaultValue="26,44" className="bg-slate-800 border-slate-700" />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="mt-6">
-                                                    <h4 className="text-cyan-400 mb-4">RAM (por GB)</h4>
-                                                    <div>
-                                                        <Label>Custo Mensal</Label>
-                                                        <Input defaultValue="11,13" className="bg-slate-800 border-slate-700" />
+                                                        <Button onClick={handleAddVMProduct} className="bg-cyan-600 text-white hover:bg-cyan-700">
+                                                            <Plus className="h-4 w-4 mr-2" />Adicionar à Proposta
+                                                        </Button>
                                                     </div>
                                                 </div>
                                             </CardContent>
                                         </Card>
-
-                                        {/* Armazenamento (Custos) */}
-                                        <Card className="bg-slate-900/80 border-slate-800 text-white">
-                                            <CardHeader>
-                                                <CardTitle className="text-cyan-400">Armazenamento (Custos)</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                                    <div>
-                                                        <h4 className="text-cyan-400 mb-4">HDD SAS</h4>
-                                                        <div>
-                                                            <Label>Custo Mensal</Label>
-                                                            <Input defaultValue="0,2" className="bg-slate-800 border-slate-700" />
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="text-cyan-400 mb-4">SSD Performance</h4>
-                                                        <div>
-                                                            <Label>Custo Mensal</Label>
-                                                            <Input defaultValue="0,35" className="bg-slate-800 border-slate-700" />
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="text-cyan-400 mb-4">NVMe</h4>
-                                                        <div>
-                                                            <Label>Custo Mensal</Label>
-                                                            <Input defaultValue="0,45" className="bg-slate-800 border-slate-700" />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-
-                                        {/* Placa de Rede e Sistema Operacional */}
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                            <Card className="bg-slate-900/80 border-slate-800 text-white">
+                                        
+                                        {userRole === 'admin' && (
+                                            <Card>
                                                 <CardHeader>
-                                                    <CardTitle className="text-cyan-400">Placa de Rede (Custos)</CardTitle>
-                                                </CardHeader>
-                                                <CardContent className="space-y-4">
-                                                    <div>
-                                                        <h4 className="text-cyan-400 mb-2">1 Gbps</h4>
-                                                        <div>
-                                                            <Label>Custo Mensal</Label>
-                                                            <Input defaultValue="0" className="bg-slate-800 border-slate-700" />
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="text-cyan-400 mb-2">10 Gbps</h4>
-                                                        <div>
-                                                            <Label>Custo Mensal</Label>
-                                                            <Input defaultValue="100" className="bg-slate-800 border-slate-700" />
-                                                        </div>
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-
-                                            <Card className="bg-slate-900/80 border-slate-800 text-white">
-                                                <CardHeader>
-                                                    <CardTitle className="text-cyan-400">Sistema Operacional e Serviços (Custos)</CardTitle>
+                                                    <CardTitle>Configurações de Administrador</CardTitle>
                                                 </CardHeader>
                                                 <CardContent className="space-y-4">
                                                     <div className="grid grid-cols-2 gap-4">
-                                                        <div>
-                                                            <h4 className="text-cyan-400 mb-2">Windows Server 2022 Standard</h4>
-                                                            <div>
-                                                                <Label>Custo Mensal</Label>
-                                                                <Input defaultValue="135" className="bg-slate-800 border-slate-700" />
-                                                            </div>
+                                                        <div className="space-y-2">
+                                                            <Label>Markup (%)</Label>
+                                                            <Input type="number" value={markup} onChange={(e) => setMarkup(Number(e.target.value))} />
                                                         </div>
-                                                        <div>
-                                                            <h4 className="text-cyan-400 mb-2">Windows 10 Pro</h4>
-                                                            <div>
-                                                                <Label>Custo Mensal</Label>
-                                                                <Input defaultValue="120" className="bg-slate-800 border-slate-700" />
-                                                            </div>
+                                                        <div className="space-y-2">
+                                                            <Label>Margem Líquida Estimada</Label>
+                                                            <Input value={`${estimatedNetMargin.toFixed(2)}%`} readOnly />
                                                         </div>
                                                     </div>
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div>
-                                                            <h4 className="text-cyan-400 mb-2">Ubuntu Server 22.04 LTS</h4>
-                                                            <div>
-                                                                <Label>Custo Mensal</Label>
-                                                                <Input defaultValue="0" className="bg-slate-800 border-slate-700" />
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="text-cyan-400 mb-2">CentOS Stream 9</h4>
-                                                            <div>
-                                                                <Label>Custo Mensal</Label>
-                                                                <Input defaultValue="0" className="bg-slate-800 border-slate-700" />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div>
-                                                            <h4 className="text-cyan-400 mb-2">Debian 12</h4>
-                                                            <div>
-                                                                <Label>Custo Mensal</Label>
-                                                                <Input defaultValue="0" className="bg-slate-800 border-slate-700" />
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="text-cyan-400 mb-2">Rocky Linux 9</h4>
-                                                            <div>
-                                                                <Label>Custo Mensal</Label>
-                                                                <Input defaultValue="0" className="bg-slate-800 border-slate-700" />
-                                                            </div>
+                                                    {/* Outras configurações de admin podem ir aqui */}
+                                                    <div className="space-y-2 pt-4">
+                                                        <Label>Regime Tributário</Label>
+                                                        <RadioGroup value={selectedTaxRegime} onValueChange={handleTaxRegimeChange} className="flex space-x-4">
+                                                            <div className="flex items-center space-x-2"><RadioGroupItem value="lucro_real" id="lr" /><Label htmlFor="lr">Lucro Real</Label></div>
+                                                            <div className="flex items-center space-x-2"><RadioGroupItem value="lucro_presumido" id="lp" /><Label htmlFor="lp">Lucro Presumido</Label></div>
+                                                        </RadioGroup>
+                                                        <div className="mt-4 p-2 border rounded-md bg-gray-100">
+                                                            <p className="text-sm">PIS/COFINS: {pisCofins}%</p>
+                                                            <p className="text-sm">ISS: {iss}%</p>
+                                                            <p className="text-sm">CSLL/IR: {csllIr}%</p>
+                                                            <p className="text-sm font-bold">Total: {totalTaxes.toFixed(2)}%</p>
                                                         </div>
                                                     </div>
                                                 </CardContent>
                                             </Card>
-                                        </div>
-
-                                        {/* Serviços Adicionais */}
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                            <Card className="bg-slate-900/80 border-slate-800 text-white">
-                                                <CardHeader>
-                                                    <CardTitle className="text-cyan-400">Backup (por GB)</CardTitle>
-                                                </CardHeader>
-                                                <CardContent>
-                                                    <div>
-                                                        <Label>Custo Mensal</Label>
-                                                        <Input defaultValue="1,25" className="bg-slate-800 border-slate-700" />
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-
-                                            <Card className="bg-slate-900/80 border-slate-800 text-white">
-                                                <CardHeader>
-                                                    <CardTitle className="text-cyan-400">IP Adicional</CardTitle>
-                                                </CardHeader>
-                                                <CardContent>
-                                                    <div>
-                                                        <Label>Custo Mensal</Label>
-                                                        <Input defaultValue="35" className="bg-slate-800 border-slate-700" />
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        </div>
-
-                                        {/* Snapshot e VPN */}
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                            <Card className="bg-slate-900/80 border-slate-800 text-white">
-                                                <CardHeader>
-                                                    <CardTitle className="text-cyan-400">Snapshot Adicional</CardTitle>
-                                                </CardHeader>
-                                                <CardContent>
-                                                    <div>
-                                                        <Label>Custo Mensal</Label>
-                                                        <Input defaultValue="15" className="bg-slate-800 border-slate-700" />
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-
-                                            <Card className="bg-slate-900/80 border-slate-800 text-white">
-                                                <CardHeader>
-                                                    <CardTitle className="text-cyan-400">VPN Site-to-Site</CardTitle>
-                                                </CardHeader>
-                                                <CardContent>
-                                                    <div>
-                                                        <Label>Custo Mensal</Label>
-                                                        <Input defaultValue="250" className="bg-slate-800 border-slate-700" />
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        </div>
-
-                                        {/* Prazos Contratuais e Descontos */}
-                                        <Card className="bg-slate-900/80 border-slate-800 text-white">
-                                            <CardHeader>
-                                                <CardTitle className="text-cyan-400">Prazos Contratuais e Descontos</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
-                                                    <div>
-                                                        <h4 className="text-cyan-400 mb-2">12 Meses</h4>
-                                                        <div>
-                                                            <Label>Desconto (%)</Label>
-                                                            <Input defaultValue="0" className="bg-slate-800 border-slate-700" />
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="text-cyan-400 mb-2">24 Meses</h4>
-                                                        <div>
-                                                            <Label>Desconto (%)</Label>
-                                                            <Input defaultValue="5" className="bg-slate-800 border-slate-700" />
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="text-cyan-400 mb-2">36 Meses</h4>
-                                                        <div>
-                                                            <Label>Desconto (%)</Label>
-                                                            <Input defaultValue="10" className="bg-slate-800 border-slate-700" />
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="text-cyan-400 mb-2">48 Meses</h4>
-                                                        <div>
-                                                            <Label>Desconto (%)</Label>
-                                                            <Input defaultValue="15" className="bg-slate-800 border-slate-700" />
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="text-cyan-400 mb-2">60 Meses</h4>
-                                                        <div>
-                                                            <Label>Desconto (%)</Label>
-                                                            <Input defaultValue="20" className="bg-slate-800 border-slate-700" />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-
-                                        {/* Taxa de Setup */}
-                                        <Card className="bg-slate-900/80 border-slate-800 text-white">
-                                            <CardHeader>
-                                                <CardTitle className="text-cyan-400">Taxa de Setup</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div>
-                                                    <h4 className="text-cyan-400 mb-4">Taxa de Setup Geral</h4>
-                                                    <div>
-                                                        <Label>Valor Base</Label>
-                                                        <Input defaultValue="0" className="bg-slate-800 border-slate-700" />
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-
-                                        {/* Gestão e Suporte */}
-                                        <Card className="bg-slate-900/80 border-slate-800 text-white">
-                                            <CardHeader>
-                                                <CardTitle className="text-cyan-400">Gestão e Suporte</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div>
-                                                    <h4 className="text-cyan-400 mb-4">Serviço Mensal de Gestão e Suporte</h4>
-                                                    <div>
-                                                        <Label>Valor Mensal</Label>
-                                                        <Input defaultValue="250" className="bg-slate-800 border-slate-700" />
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-
-                                        {/* Botão Salvar */}
-                                        <div className="flex justify-end">
-                                            <Button className="bg-blue-600 hover:bg-blue-700">
-                                                <Save className="h-4 w-4 mr-2" />
-                                                Salvar Configurações
-                                            </Button>
-                                        </div>
+                                        )}
                                     </div>
-                                </TabsContent>
-                                )}
-                                <TabsContent value="proposal">
-                                    <div className="space-y-6 mt-6">
-                                        <Card className="bg-slate-900/80 border-slate-800 text-white">
+                                </div>
+                            </TabsContent>
+                            <TabsContent value="configurations">
+                                <div className="space-y-6">
+                                    {/* Tributos */}
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="flex items-center text-cyan-400">
+                                                <Settings className="mr-2 h-5 w-5"/>
+                                                Tributos
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="grid grid-cols-4 gap-4 mb-6">
+                                                <Button variant="default" className="bg-blue-600 hover:bg-blue-700">Lucro Real</Button>
+                                                <Button variant="outline">Lucro Presumido</Button>
+                                                <Button variant="outline">Lucro Real Reduzido</Button>
+                                                <Button variant="outline">Simples Nacional</Button>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-6 mb-4">
+                                                <div>
+                                                    <Label className="text-sm font-medium">PIS/COFINS (%)</Label>
+                                                    <Input type="number" value={pisCofins} onChange={(e) => setPisCofins(Number(e.target.value))} className="mt-1" />
+                                                </div>
+                                                <div>
+                                                    <Label className="text-sm font-medium">ISS (%)</Label>
+                                                    <Input type="number" value={iss} onChange={(e) => setIss(Number(e.target.value))} className="mt-1" />
+                                                </div>
+                                                <div>
+                                                    <Label className="text-sm font-medium">CSLL/IR (%)</Label>
+                                                    <Input type="number" value={csllIr} onChange={(e) => setCsllIr(Number(e.target.value))} className="mt-1" />
+                                                </div>
+                                            </div>
+                                            <div className="text-center text-cyan-400 text-lg font-semibold mb-4">
+                                                Total de Impostos do Regime Selecionado: {(pisCofins + iss + csllIr).toFixed(2)}%
+                                            </div>
+                                            <p className="text-sm text-gray-400">
+                                                Edite os impostos de cada regime tributário. Os valores são percentuais e aceitam até 2 casas decimais.
+                                            </p>
+                                        </CardContent>
+                                    </Card>
+
+                                    {/* Markup e Margem Líquida + Comissões */}
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <Card>
                                             <CardHeader>
-                                                <CardTitle className="flex items-center gap-2">
-                                                    <FileText className="h-5 w-5" />
-                                                    Resumo da Proposta
-                                                </CardTitle>
+                                                <CardTitle className="text-cyan-400">Markup e Margem Líquida</CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="space-y-4">
+                                                <div>
+                                                    <Label className="text-sm font-medium">% Markup sobre o Custo (%)</Label>
+                                                    <Input type="number" value={markup} onChange={(e) => setMarkup(Number(e.target.value))} className="mt-1" />
+                                                </div>
+                                                <div>
+                                                    <Label className="text-sm font-medium">% Margem Líquida Estimada (%)</Label>
+                                                    <Input value={`${((markup / (100 + markup)) * 100).toFixed(2)}%`} readOnly className="mt-1 bg-gray-800" />
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle className="text-cyan-400">Comissões</CardTitle>
                                             </CardHeader>
                                             <CardContent>
-                                                {addedProducts.length === 0 ? (
-                                                    <div className="text-center py-8 text-slate-400">
-                                                        <Server className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                                        <p>Nenhuma VM adicionada à proposta ainda.</p>
-                                                        <p className="text-sm">Configure uma VM na aba "Calculadora VM" e clique em "Adicionar à Proposta".</p>
-                                                    </div>
-                                                ) : (
-                                                    <>
-                                                        <Table>
-                                                            <TableHeader>
-                                                                <TableRow className="border-slate-700">
-                                                                    <TableHead className="text-white">Descrição</TableHead>
-                                                                    <TableHead className="text-white">Setup</TableHead>
-                                                                    <TableHead className="text-white">Mensal</TableHead>
-                                                                    <TableHead className="text-white w-20">Ações</TableHead>
-                                                                </TableRow>
-                                                            </TableHeader>
-                                                            <TableBody>
-                                                                {addedProducts.map(p => (
-                                                                    <TableRow key={p.id} className="border-slate-800">
-                                                                        <TableCell className="text-white">{p.description}</TableCell>
-                                                                        <TableCell className="text-white">{formatCurrency(p.setup)}</TableCell>
-                                                                        <TableCell className="text-white">{formatCurrency(p.monthly)}</TableCell>
-                                                                        <TableCell>
-                                                                            <Button 
-                                                                                variant="destructive" 
-                                                                                size="sm" 
-                                                                                onClick={() => handleRemoveProduct(p.id)}
-                                                                            >
-                                                                                <Trash2 className="h-4 w-4" />
-                                                                            </Button>
-                                                                        </TableCell>
-                                                                    </TableRow>
-                                                                ))}
-                                                            </TableBody>
-                                                        </Table>
-                                                        
-                                                        <div className="flex justify-between items-center pt-4 border-t border-slate-700">
-                                                            <div className="text-lg font-semibold">
-                                                                Total Setup: <span className="text-green-400">{formatCurrency(addedProducts.reduce((sum, p) => sum + p.setup, 0))}</span>
-                                                            </div>
-                                                            <div className="text-lg font-semibold">
-                                                                Total Mensal: <span className="text-green-400">{formatCurrency(addedProducts.reduce((sum, p) => sum + p.monthly, 0))}</span>
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        <div className="flex gap-4 pt-4">
-                                                            <Button 
-                                                                className="bg-green-600 hover:bg-green-700"
-                                                                onClick={() => setActiveTab('calculator')}
-                                                            >
-                                                                <Plus className="h-4 w-4 mr-2" />
-                                                                Adicionar Mais VMs
-                                                            </Button>
-                                                            <Button 
-                                                                variant="outline"
-                                                                className="bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
-                                                            >
-                                                                <Download className="h-4 w-4 mr-2" />
-                                                                Gerar Proposta
-                                                            </Button>
-                                                        </div>
-                                                    </>
-                                                )}
+                                                <div className="flex items-center gap-2">
+                                                    <Label className="text-sm font-medium">% Percentual sobre a Receita Bruta</Label>
+                                                    <Input type="number" value={commission} onChange={(e) => setCommission(Number(e.target.value))} className="w-20" />
+                                                    <span className="text-sm">%</span>
+                                                </div>
                                             </CardContent>
                                         </Card>
                                     </div>
-                                </TabsContent>
-                            </Tabs>
-                        </div>
 
+                                    {/* Recursos Base (Custos) */}
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="text-cyan-400">Recursos Base (Custos)</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="grid grid-cols-2 gap-8">
+                                                <div>
+                                                    <h4 className="text-cyan-400 font-medium mb-3">vCPU Windows (por core)</h4>
+                                                    <div>
+                                                        <Label className="text-sm">Custo Mensal</Label>
+                                                        <Input type="number" value={vcpuWindows} onChange={(e) => setVcpuWindows(Number(e.target.value))} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-cyan-400 font-medium mb-3">vCPU Linux (por core)</h4>
+                                                    <div>
+                                                        <Label className="text-sm">Custo Mensal</Label>
+                                                        <Input type="number" value={vcpuLinux} onChange={(e) => setVcpuLinux(Number(e.target.value))} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="mt-6">
+                                                <h4 className="text-cyan-400 font-medium mb-3">RAM (por GB)</h4>
+                                                <div className="w-1/2">
+                                                    <Label className="text-sm">Custo Mensal</Label>
+                                                    <Input type="number" value={ramCost} onChange={(e) => setRamCost(Number(e.target.value))} className="mt-1" />
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
 
+                                    {/* Armazenamento (Custos) */}
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="text-cyan-400">Armazenamento (Custos)</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="grid grid-cols-2 gap-8 mb-6">
+                                                <div>
+                                                    <h4 className="text-cyan-400 font-medium mb-3">HDD SAS</h4>
+                                                    <div>
+                                                        <Label className="text-sm">Custo Mensal</Label>
+                                                        <Input type="number" value={hddSas} onChange={(e) => setHddSas(Number(e.target.value))} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-cyan-400 font-medium mb-3">SSD Performance</h4>
+                                                    <div>
+                                                        <Label className="text-sm">Custo Mensal</Label>
+                                                        <Input type="number" value={ssdPerformance} onChange={(e) => setSsdPerformance(Number(e.target.value))} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="w-1/2">
+                                                <h4 className="text-cyan-400 font-medium mb-3">NVMe</h4>
+                                                <div>
+                                                    <Label className="text-sm">Custo Mensal</Label>
+                                                    <Input type="number" value={nvme} onChange={(e) => setNvme(Number(e.target.value))} className="mt-1" />
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
 
-                        <div className="flex justify-end gap-4 mt-8">
-                            <Button onClick={saveProposal} className="bg-green-600 hover:bg-green-700"><Save className="h-4 w-4 mr-2" />Salvar Proposta</Button>
-                            <Button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700" disabled={addedProducts.length === 0}><Download className="h-4 w-4 mr-2" />Gerar PDF</Button>
-                            <Button variant="outline" onClick={cancelAction}>Cancelar</Button>
-                        </div>
-                    </>
-                )}
-            </div >
+                                    {/* Placa de Rede (Custos) */}
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="text-cyan-400">Placa de Rede (Custos)</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="grid grid-cols-2 gap-8">
+                                                <div>
+                                                    <h4 className="text-cyan-400 font-medium mb-3">1 Gbps</h4>
+                                                    <div>
+                                                        <Label className="text-sm">Custo Mensal</Label>
+                                                        <Input type="number" value={0} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-cyan-400 font-medium mb-3">10 Gbps</h4>
+                                                    <div>
+                                                        <Label className="text-sm">Custo Mensal</Label>
+                                                        <Input type="number" value={network10Gbps} onChange={(e) => setNetwork10Gbps(Number(e.target.value))} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
 
-            <div id="print-area" className="print-only">
-                {currentProposal && (
-                    <>
-                        <div className="print-header">
-                            <h1>Proposta Comercial</h1>
-                            <p><strong>Proposta ID:</strong> {currentProposal.id}</p>
-                            <p><strong>Cliente:</strong> {clientName}</p>
-                            <p><strong>Gerente:</strong> {accountManager}</p>
-                            <p><strong>Data:</strong> {currentProposal.date}</p>
-                        </div>
-                        <h2>Itens da Proposta</h2>
-                        <table className="print-table">
-                            <thead><tr><th>Descrição</th><th>Setup</th><th>Mensal</th></tr></thead>
-                            <tbody>
-                                {addedProducts.map(p => (
-                                    <tr key={p.id}><td>{p.description}</td><td>{formatCurrency(p.setup)}</td><td>{formatCurrency(p.monthly)}</td></tr>
-                                ))}
-                            </tbody>
-                        </table>
-                        <div className="print-totals">
-                            <h3>Total Geral</h3>
-                            <p><strong>Total Instalação:</strong> {formatCurrency(totalSetup)}</p>
-                            <p><strong>Total Mensal:</strong> {formatCurrency(totalMonthly)}</p>
-                        </div>
-                    </>
-                )}
+                                    {/* Sistema Operacional e Serviços (Custos) */}
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="text-cyan-400">Sistema Operacional e Serviços (Custos)</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="grid grid-cols-2 gap-8 mb-6">
+                                                <div>
+                                                    <h4 className="text-cyan-400 font-medium mb-3">Windows Server 2022 Standard</h4>
+                                                    <div>
+                                                        <Label className="text-sm">Custo Mensal</Label>
+                                                        <Input type="number" value={windowsServer2022} onChange={(e) => setWindowsServer2022(Number(e.target.value))} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-cyan-400 font-medium mb-3">Windows 10 Pro</h4>
+                                                    <div>
+                                                        <Label className="text-sm">Custo Mensal</Label>
+                                                        <Input type="number" value={windows10Pro} onChange={(e) => setWindows10Pro(Number(e.target.value))} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-8 mb-6">
+                                                <div>
+                                                    <h4 className="text-cyan-400 font-medium mb-3">Ubuntu Server 22.04 LTS</h4>
+                                                    <div>
+                                                        <Label className="text-sm">Custo Mensal</Label>
+                                                        <Input type="number" value={ubuntuServer} onChange={(e) => setUbuntuServer(Number(e.target.value))} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-cyan-400 font-medium mb-3">CentOS Stream 9</h4>
+                                                    <div>
+                                                        <Label className="text-sm">Custo Mensal</Label>
+                                                        <Input type="number" value={centosStream} onChange={(e) => setCentosStream(Number(e.target.value))} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-8 mb-6">
+                                                <div>
+                                                    <h4 className="text-cyan-400 font-medium mb-3">Debian 12</h4>
+                                                    <div>
+                                                        <Label className="text-sm">Custo Mensal</Label>
+                                                        <Input type="number" value={debian12} onChange={(e) => setDebian12(Number(e.target.value))} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-cyan-400 font-medium mb-3">Rocky Linux 9</h4>
+                                                    <div>
+                                                        <Label className="text-sm">Custo Mensal</Label>
+                                                        <Input type="number" value={rockyLinux} onChange={(e) => setRockyLinux(Number(e.target.value))} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-8">
+                                                <div>
+                                                    <h4 className="text-cyan-400 font-medium mb-3">Backup (por GB)</h4>
+                                                    <div>
+                                                        <Label className="text-sm">Custo Mensal</Label>
+                                                        <Input type="number" value={backupPerGb} onChange={(e) => setBackupPerGb(Number(e.target.value))} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-cyan-400 font-medium mb-3">IP Adicional</h4>
+                                                    <div>
+                                                        <Label className="text-sm">Custo Mensal</Label>
+                                                        <Input type="number" value={additionalIp} onChange={(e) => setAdditionalIp(Number(e.target.value))} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+
+                                    {/* Prazos Contratuais e Descontos */}
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="text-cyan-400">Prazos Contratuais e Descontos</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="grid grid-cols-2 gap-8 mb-6">
+                                                <div>
+                                                    <h4 className="text-cyan-400 font-medium mb-3">12 Meses</h4>
+                                                    <div>
+                                                        <Label className="text-sm">Desconto (%)</Label>
+                                                        <Input type="number" value={discount12m} onChange={(e) => setDiscount12m(Number(e.target.value))} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-cyan-400 font-medium mb-3">24 Meses</h4>
+                                                    <div>
+                                                        <Label className="text-sm">Desconto (%)</Label>
+                                                        <Input type="number" value={discount24m} onChange={(e) => setDiscount24m(Number(e.target.value))} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-8 mb-6">
+                                                <div>
+                                                    <h4 className="text-cyan-400 font-medium mb-3">36 Meses</h4>
+                                                    <div>
+                                                        <Label className="text-sm">Desconto (%)</Label>
+                                                        <Input type="number" value={discount36m} onChange={(e) => setDiscount36m(Number(e.target.value))} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-cyan-400 font-medium mb-3">48 Meses</h4>
+                                                    <div>
+                                                        <Label className="text-sm">Desconto (%)</Label>
+                                                        <Input type="number" value={discount48m} onChange={(e) => setDiscount48m(Number(e.target.value))} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="w-1/2">
+                                                <h4 className="text-cyan-400 font-medium mb-3">60 Meses</h4>
+                                                <div>
+                                                    <Label className="text-sm">Desconto (%)</Label>
+                                                    <Input type="number" value={discount60m} onChange={(e) => setDiscount60m(Number(e.target.value))} className="mt-1" />
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+
+                                    {/* Taxa de Setup */}
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="text-cyan-400">Taxa de Setup</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="w-1/2">
+                                                <h4 className="text-cyan-400 font-medium mb-3">Taxa de Setup Geral</h4>
+                                                <div>
+                                                    <Label className="text-sm">Valor Base</Label>
+                                                    <Input type="number" value={setupFeeGeneral} onChange={(e) => setSetupFeeGeneral(Number(e.target.value))} className="mt-1" />
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+
+                                    {/* Gestão e Suporte */}
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="text-cyan-400">Gestão e Suporte</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="w-1/2 mb-6">
+                                                <h4 className="text-cyan-400 font-medium mb-3">Serviço Mensal de Gestão e Suporte</h4>
+                                                <div>
+                                                    <Label className="text-sm">Valor Mensal</Label>
+                                                    <Input type="number" value={managementSupport} onChange={(e) => setManagementSupport(Number(e.target.value))} className="mt-1" />
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-end">
+                                                <Button className="bg-blue-600 hover:bg-blue-700">
+                                                    <Save className="mr-2 h-4 w-4" />
+                                                    Salvar Configurações
+                                                </Button>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            </TabsContent>
+                            <TabsContent value="proposal">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Resumo da Proposta</CardTitle>
+                                        <CardDescription>Revise os itens antes de salvar ou imprimir.</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Descrição</TableHead>
+                                                    <TableHead className="text-right">Setup</TableHead>
+                                                    <TableHead className="text-right">Mensal</TableHead>
+                                                    <TableHead className="no-print"></TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {addedProducts.map((p) => (
+                                                    <TableRow key={p.id}>
+                                                        <TableCell>{p.description}</TableCell>
+                                                        <TableCell className="text-right">{formatCurrency(p.setup)}</TableCell>
+                                                        <TableCell className="text-right">{formatCurrency(p.monthly)}</TableCell>
+                                                        <TableCell className="text-right no-print">
+                                                            <Button variant="ghost" size="icon" onClick={() => handleRemoveProduct(p.id)}>
+                                                                <Trash2 className="h-4 w-4 text-red-500" />
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                    <CardFooter className="flex justify-end font-bold text-lg">
+                                        <div className="text-right">
+                                            <p>Total Setup: {formatCurrency(totalSetup)}</p>
+                                            <p>Total Mensal: {formatCurrency(totalMonthly)}</p>
+                                        </div>
+                                    </CardFooter>
+                                </Card>
+                            </TabsContent>
+                        </Tabs>
+                    </CardContent>
+                </Card>
             </div>
-        </>
-    );
+        );
+    }
 }
 
 export default MaquinasVirtuaisCalculator;

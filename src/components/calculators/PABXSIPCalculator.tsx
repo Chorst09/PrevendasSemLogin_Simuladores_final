@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Phone, PhoneForwarded } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { Proposal, ProposalItem, ClientData, AccountManagerData } from '@/types';
+import { useAuth } from '@/hooks/use-auth';
 
 // Interfaces
 interface PABXResult {
@@ -27,34 +29,6 @@ interface SIPResult {
     monthly: number;
 }
 
-interface ProposalItem {
-    description: string;
-    setup: number;
-    monthly: number;
-}
-
-interface ClientData {
-    name: string;
-    email: string;
-    phone: string;
-}
-
-interface AccountManagerData {
-    name: string;
-    email: string;
-    phone: string;
-}
-
-interface Proposal {
-    id: string;
-    client: ClientData;
-    accountManager: AccountManagerData;
-    items: ProposalItem[];
-    totalSetup: number;
-    totalMonthly: number;
-    createdAt: string;
-}
-
 type PABXPriceRange = '10' | '20' | '30' | '50' | '100' | '500' | '1000';
 type AIPlanKey = '20K' | '40K' | '60K' | '100K' | '150K' | '200K';
 type SIPPriceKey = '5' | '10' | '20' | '30';
@@ -63,9 +37,14 @@ type DTRPriceKey = '4' | '10' | '30';
 interface PABXSIPCalculatorProps {
     userRole?: 'admin' | 'user';
     onBackToPanel?: () => void;
+    userId: string;
+    userEmail: string;
+    userName?: string;
 }
 
-const PABXSIPCalculator: React.FC<PABXSIPCalculatorProps> = ({ userRole, onBackToPanel }) => {
+const PABXSIPCalculator: React.FC<PABXSIPCalculatorProps> = ({ userRole, onBackToPanel, userId, userEmail, userName }) => {
+    const { token } = useAuth();
+    
     // Estado para controlar a tela atual
     const [currentView, setCurrentView] = useState<'search' | 'client-form' | 'calculator'>('search');
     const [searchTerm, setSearchTerm] = useState<string>('');
@@ -113,6 +92,20 @@ const PABXSIPCalculator: React.FC<PABXSIPCalculatorProps> = ({ userRole, onBackT
     const [markup, setMarkup] = useState<number>(30);
     const [estimatedNetMargin, setEstimatedNetMargin] = useState<number>(0);
     const [commissionPercentage, setCommissionPercentage] = useState<number>(3);
+
+    // Estados para Período do Contrato
+    const [contractPeriod, setContractPeriod] = useState<number>(12);
+
+
+    useEffect(() => {
+        if (userName || userEmail) {
+            setAccountManagerData(prev => ({
+                ...prev,
+                name: userName || prev.name,
+                email: userEmail || prev.email,
+            }));
+        }
+    }, [userName, userEmail]);
 
     
 
@@ -303,9 +296,13 @@ const PABXSIPCalculator: React.FC<PABXSIPCalculatorProps> = ({ userRole, onBackT
         if (!pabxResult) return;
 
         const newItem: ProposalItem = {
+            id: `PABX-${Date.now()}-${Math.random()}`,
+            name: `PABX ${pabxExtensions} ramais`,
             description: `PABX ${pabxExtensions} ramais`,
+            unitPrice: pabxResult.totalMonthly,
             setup: pabxResult.setup,
-            monthly: pabxResult.totalMonthly
+            monthly: pabxResult.totalMonthly,
+            quantity: 1
         };
 
         setProposalItems(prev => [...prev, newItem]);
@@ -316,9 +313,13 @@ const PABXSIPCalculator: React.FC<PABXSIPCalculatorProps> = ({ userRole, onBackT
         if (!sipResult) return;
 
         const newItem: ProposalItem = {
+            id: `SIP-${Date.now()}-${Math.random()}`,
+            name: sipPlan,
             description: sipPlan,
+            unitPrice: sipResult.monthly,
             setup: sipResult.setup,
-            monthly: sipResult.monthly
+            monthly: sipResult.monthly,
+            quantity: 1
         };
 
         setProposalItems(prev => [...prev, newItem]);
@@ -329,7 +330,7 @@ const PABXSIPCalculator: React.FC<PABXSIPCalculatorProps> = ({ userRole, onBackT
     const totalMonthly = proposalItems.reduce((sum, item) => sum + item.monthly, 0);
 
     // Função para salvar proposta
-    const saveProposal = () => {
+    const saveProposal = async () => {
         if (proposalItems.length === 0) {
             alert('Adicione pelo menos um item à proposta antes de salvar.');
             return;
@@ -340,62 +341,72 @@ const PABXSIPCalculator: React.FC<PABXSIPCalculatorProps> = ({ userRole, onBackT
             return;
         }
 
-        const newProposal: Proposal = {
-            id: `PROP-${Date.now()}`,
+        const proposalToSave = {
+            id: `prop_${Date.now()}`,
             client: clientData,
             accountManager: accountManagerData,
-            items: proposalItems,
-            totalSetup,
-            totalMonthly,
-            createdAt: new Date().toISOString()
+            products: proposalItems.map(item => ({ ...item, id: `PROD-${Date.now()}-${Math.random()}`, quantity: 1})),
+            totalSetup: totalSetup,
+            totalMonthly: totalMonthly,
+            contractPeriod: contractPeriod,
+            status: 'Pendente',
+            type: 'PABX_SIP',
+            createdAt: new Date().toISOString(),
+            userId: userId,
+            userEmail: userEmail || '',
         };
 
-        setSavedProposals(prev => [newProposal, ...prev]);
+        // Lógica de salvamento via API
+        try {
+            const response = await fetch('/api/proposals', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                credentials: 'include',
+                body: JSON.stringify(proposalToSave),
+            });
 
-        // Salvar no localStorage
-        const existingProposals = JSON.parse(localStorage.getItem('pabx-sip-proposals') || '[]');
-        existingProposals.unshift(newProposal);
-        localStorage.setItem('pabx-sip-proposals', JSON.stringify(existingProposals));
-
-        // Salvar preços PABX e SIP no localStorage
-        localStorage.setItem('pabxPrices', JSON.stringify(pabxPrices));
-        localStorage.setItem('sipPrices', JSON.stringify(sipPrices));
-        localStorage.setItem('sipConfig', JSON.stringify(sipConfig));
-
-        alert(`Proposta ${newProposal.id} salva com sucesso!`);
-
-        // Resetar formulário
-        setProposalItems([]);
-        setClientData({ name: '', email: '', phone: '' });
-        setAccountManagerData({ name: '', email: '', phone: '' });
-        setCurrentView('search');
+            if (response.ok) {
+                const data = await response.json();
+                setSavedProposals(data);
+            } else {
+                console.error('Falha ao buscar propostas');
+            }
+        } catch (error) {
+            console.error('Erro ao conectar com a API:', error);
+            console.error('Erro ao salvar proposta:', error);
+            alert(`Erro ao salvar proposta: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+        }
     };
 
-    // Carregar propostas e preços do localStorage
+    // Carregar propostas da API
     useEffect(() => {
-        const savedProposals = JSON.parse(localStorage.getItem('pabx-sip-proposals') || '[]');
-        setSavedProposals(savedProposals);
+        const fetchProposals = async () => {
+            if (!token) return;
+            
+            try {
+                const response = await fetch('/api/proposals?type=PABX_SIP', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setSavedProposals(data);
+                } else {
+                    console.error('Falha ao buscar propostas');
+                }
+            } catch (error) {
+                console.error('Erro ao conectar com a API:', error);
+            }
+        };
 
-        const savedPabxPrices = localStorage.getItem('pabxPrices');
-        if (savedPabxPrices) {
-            setPabxPrices(JSON.parse(savedPabxPrices));
-        }
-
-        const savedAiAgentPrices = localStorage.getItem('aiAgentPrices');
-        if (savedAiAgentPrices) {
-            setAiAgentPrices(JSON.parse(savedAiAgentPrices));
-        }
-
-        const savedSipPrices = localStorage.getItem('sipPrices');
-        if (savedSipPrices) {
-            setSipPrices(JSON.parse(savedSipPrices));
-        }
-
-        const savedSipConfig = localStorage.getItem('sipConfig');
-        if (savedSipConfig) {
-            setSipConfig(JSON.parse(savedSipConfig));
-        }
-    }, []);
+        fetchProposals();
+    }, [token]);
 
     // Efeito para calcular a margem líquida estimada a partir do markup
     useEffect(() => {
@@ -586,12 +597,14 @@ const PABXSIPCalculator: React.FC<PABXSIPCalculatorProps> = ({ userRole, onBackT
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    savedProposals.map((proposal) => (
-                                        <TableRow key={proposal.id} className="border-slate-800 hover:bg-slate-800/50">
+                                    savedProposals
+                                        .filter(proposal => proposal && proposal.id)
+                                        .map((proposal, index) => (
+                                        <TableRow key={proposal.id || `proposal-${index}`} className="border-slate-800 hover:bg-slate-800/50">
                                             <TableCell className="text-slate-300">{proposal.id}</TableCell>
-                                            <TableCell className="text-slate-300">{proposal.client.name}</TableCell>
-                                            <TableCell className="text-slate-300">{new Date(proposal.createdAt).toLocaleDateString('pt-BR')}</TableCell>
-                                            <TableCell className="text-slate-300">{formatCurrency(proposal.totalMonthly)}</TableCell>
+                                            <TableCell className="text-slate-300">{proposal.client?.name || 'N/A'}</TableCell>
+                                            <TableCell className="text-slate-300">{proposal.createdAt ? new Date(proposal.createdAt).toLocaleDateString('pt-BR') : 'N/A'}</TableCell>
+                                            <TableCell className="text-slate-300">{formatCurrency(proposal.totalMonthly || 0)}</TableCell>
                                             <TableCell>
                                                 <Button
                                                     variant="outline"
@@ -599,9 +612,10 @@ const PABXSIPCalculator: React.FC<PABXSIPCalculatorProps> = ({ userRole, onBackT
                                                     className="border-slate-600 text-slate-300 hover:bg-slate-700"
                                                     onClick={() => {
                                                         // Carregar dados da proposta para edição
-                                                        setClientData(proposal.client);
-                                                        setAccountManagerData(proposal.accountManager);
-                                                        setProposalItems(proposal.items);
+                                                        setClientData(proposal.client || { name: '', email: '', phone: '' });
+                                                        setAccountManagerData(proposal.accountManager || { name: '', email: '', phone: '' });
+                                                        setProposalItems(proposal.products || []);
+                                                        setContractPeriod(proposal.contractPeriod || 12);
                                                         setCurrentView('calculator');
                                                     }}
                                                 >
@@ -740,7 +754,7 @@ const PABXSIPCalculator: React.FC<PABXSIPCalculatorProps> = ({ userRole, onBackT
                                 {pabxIncludeAI && (
                                     <div>
                                         <Label>Plano de Agente IA</Label>
-                                        <Select value={pabxAIPlan} onValueChange={setPabxAIPlan}>
+                                        <Select value={pabxAIPlan} onValueChange={(value) => setPabxAIPlan(value as AIPlanKey)}>
                                             <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
                                                 <SelectValue />
                                             </SelectTrigger>
@@ -905,11 +919,49 @@ const PABXSIPCalculator: React.FC<PABXSIPCalculatorProps> = ({ userRole, onBackT
                         </Card>
                     </div>
 
+                    {/* Condições Comerciais */}
+                    <Card className="bg-slate-900/80 border-slate-800 text-white mt-6">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                📋 Condições Comerciais
+                            </CardTitle>
+                            <CardDescription className="text-slate-400">
+                                Configure o período do contrato
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                <div>
+                                    <Label className="text-white font-medium mb-3 block">Prazo Contratual</Label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {[12, 24, 36, 48, 60].map((months) => (
+                                            <Button
+                                                key={months}
+                                                variant={contractPeriod === months ? "default" : "outline"}
+                                                onClick={() => setContractPeriod(months)}
+                                                className={`px-6 py-2 ${
+                                                    contractPeriod === months
+                                                        ? "bg-blue-600 hover:bg-blue-700 text-white"
+                                                        : "border-slate-600 text-slate-300 hover:bg-slate-700"
+                                                }`}
+                                            >
+                                                {months} Meses
+                                            </Button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     {/* Resumo da Proposta */}
                     {proposalItems.length > 0 && (
                         <Card className="bg-slate-900/80 border-slate-800 text-white mt-6">
                             <CardHeader>
                                 <CardTitle>Resumo da Proposta</CardTitle>
+                                <CardDescription className="text-slate-400">
+                                    Período do contrato: {contractPeriod} meses
+                                </CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <Table>

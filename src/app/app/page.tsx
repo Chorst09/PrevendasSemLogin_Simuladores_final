@@ -24,6 +24,7 @@ import PABXSIPCalculator from '@/components/calculators/PABXSIPCalculator';
 import MaquinasVirtuaisCalculator from '@/components/calculators/MaquinasVirtuaisCalculator';
 import FiberLinkCalculator from '@/components/calculators/FiberLinkCalculator';
 import RadioInternetCalculator from '@/components/calculators/RadioInternetCalculator';
+import DoubleRadioFibraCalculator from '@/components/calculators/DoubleRadioFibraCalculator';
 
 // Importe dados e tipos
 import type { NavItem } from '@/lib/types';
@@ -84,6 +85,7 @@ export default function AppPage() {
                 { id: 'calculator-maquinas-virtuais', label: 'Máquinas Virtuais', icon: <Server size={16} /> },
                 { id: 'calculator-fiber-link', label: 'Link via Fibra', icon: <Wifi size={16} /> },
                 { id: 'calculator-radio-internet', label: 'Internet via Rádio', icon: <Radio size={16} /> },
+                { id: 'calculator-double-radio-fibra', label: 'Double-Radio+Fibra', icon: <Radio size={16} /> },
             ]
         },
         { id: 'it-assessment', label: 'Assessment de TI', icon: <CheckSquare size={20} /> },
@@ -113,23 +115,29 @@ export default function AppPage() {
     const renderContent = () => {
         const handleBackToPanel = () => setActiveTab('dashboard');
 
+        if (!user) {
+            return <Loader2 className="h-8 w-8 animate-spin mx-auto mt-10" />;
+        }
+
         switch (activeTab) {
             case 'dashboard': 
-                return <DashboardView />;
+                return <DashboardView userId={user.id} />;
             case 'calculator-pabx-sip': 
-                return <PABXSIPCalculator userRole={user?.role} onBackToPanel={handleBackToPanel} />;
+                return <PABXSIPCalculator userRole={user?.role} onBackToPanel={handleBackToPanel} userId={user.id} userEmail={user.email} userName={user.name} />;
             case 'calculator-maquinas-virtuais': 
-                return <MaquinasVirtuaisCalculator userRole={user?.role} onBackToPanel={handleBackToPanel} />;
+                return <MaquinasVirtuaisCalculator userRole={user?.role} onBackToPanel={handleBackToPanel} userId={user.id} userEmail={user.email} />;
             case 'calculator-fiber-link': 
-                return <FiberLinkCalculator userRole={user?.role} onBackToPanel={handleBackToPanel} />;
+                return <FiberLinkCalculator userRole={user?.role} onBackToPanel={handleBackToPanel} userId={user.id} userEmail={user.email} />;
             case 'calculator-radio-internet': 
-                return <RadioInternetCalculator userRole={user?.role} onBackToPanel={handleBackToPanel} />;
+                return <RadioInternetCalculator userRole={user?.role} onBackToPanel={handleBackToPanel} userId={user.id} userEmail={user.email} />;
+            case 'calculator-double-radio-fibra': 
+                return <DoubleRadioFibraCalculator userRole={user?.role} onBackToPanel={handleBackToPanel} userId={user.id} userEmail={user.email} />;
             case 'it-assessment': 
                 return <iframe src="/it-assessment.html" className="w-full h-screen border-0" title="Assessment de TI" />;
             case 'poc': 
                 return <iframe src="/poc-management.html" className="w-full h-screen border-0" title="Provas de Conceito POC" />;
             default: 
-                return <DashboardView />;
+                return <DashboardView userId={user.id} />;
         }
     };
 

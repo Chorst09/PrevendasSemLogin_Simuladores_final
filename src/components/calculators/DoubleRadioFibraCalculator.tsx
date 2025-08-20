@@ -33,13 +33,7 @@ interface RadioPlan {
     price36: number;
     installationCost: number;
     description: string;
-    baseCost: number; // Custo base para cálculo de comissão
-}
-
-interface InstallationTier {
-    minValue: number;
-    maxValue: number;
-    cost: number;
+    baseCost: number;
 }
 
 interface ContractTerm {
@@ -47,14 +41,14 @@ interface ContractTerm {
     paybackMonths: number;
 }
 
-interface RadioInternetCalculatorProps {
+interface DoubleRadioFibraCalculatorProps {
     userRole?: 'admin' | 'user';
     onBackToPanel?: () => void;
     userId: string;
     userEmail: string;
 }
 
-const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userRole, onBackToPanel, userId, userEmail }) => {
+const DoubleRadioFibraCalculator: React.FC<DoubleRadioFibraCalculatorProps> = ({ userRole, onBackToPanel, userId, userEmail }) => {
     // Estados de gerenciamento de propostas
     const [currentProposal, setCurrentProposal] = useState<Proposal | null>(null);
     const [viewMode, setViewMode] = useState<'search' | 'client-form' | 'calculator'>('search');
@@ -83,7 +77,7 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
     // Estados para edição de preços
     const [isEditingPrices, setIsEditingPrices] = useState<boolean>(false);
 
-    // Dados das tabelas baseados nas imagens - RÁDIO
+    // Dados das tabelas - DOUBLE RADIO+FIBRA
     const [radioPlans, setRadioPlans] = useState<RadioPlan[]>([
         { speed: 25, price12: 720.00, price24: 527.00, price36: 474.00, installationCost: 998.00, description: "25 Mbps", baseCost: 1580.00 },
         { speed: 30, price12: 740.08, price24: 579.00, price36: 527.00, installationCost: 998.00, description: "30 Mbps", baseCost: 1580.00 },
@@ -104,12 +98,6 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
         { speed: 1000, price12: 0, price24: 0, price36: 0, installationCost: 2500.00, description: "1000 Mbps (1 Gbps)", baseCost: 23300.00 }
     ]);
 
-    const installationTiers: InstallationTier[] = [
-        { minValue: 0, maxValue: 4500, cost: 998.00 },
-        { minValue: 4500.01, maxValue: 8000, cost: 1996.00 },
-        { minValue: 8000.01, maxValue: 27000, cost: 2500.00 }
-    ];
-
     const contractTerms: ContractTerm[] = [
         { months: 12, paybackMonths: 8 },
         { months: 24, paybackMonths: 10 },
@@ -120,19 +108,23 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
 
     // Funções de cálculo
     const getMonthlyPrice = (plan: RadioPlan, term: number): number => {
+        let basePrice: number;
         switch (term) {
-            case 12: return plan.price12;
-            case 24: return plan.price24;
-            case 36: return plan.price36;
-            case 48: return plan.price36; // Use 36-month price for 48 months
-            case 60: return plan.price36; // Use 36-month price for 60 months
-            default: return plan.price36;
+            case 12: basePrice = plan.price12; break;
+            case 24: basePrice = plan.price24; break;
+            case 36: basePrice = plan.price36; break;
+            case 48: basePrice = plan.price36; break; // Use 36-month price for 48 months
+            case 60: basePrice = plan.price36; break; // Use 36-month price for 60 months
+            default: basePrice = plan.price36; break;
         }
+        // Apply 2x multiplier for Double-Radio+Fibra
+        return basePrice * 2;
     };
 
     const getInstallationCost = (speed: number): number => {
         const plan = radioPlans.find(p => p.speed === speed);
-        return plan ? plan.installationCost : 0;
+        // Apply 2x multiplier for Double-Radio+Fibra installation cost
+        return plan ? plan.installationCost * 2 : 0;
     };
 
     const calculateResult = () => {
@@ -140,7 +132,7 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
         if (!plan) return null;
 
         const monthlyPrice = getMonthlyPrice(plan, contractTerm);
-        if (monthlyPrice === 0) return null; // Plano não disponível para este prazo
+        if (monthlyPrice === 0) return null;
 
         const installationCost = includeInstallation ? getInstallationCost(selectedSpeed) : 0;
         const contractInfo = contractTerms.find(c => c.months === contractTerm);
@@ -167,18 +159,18 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
     // Gerenciamento de produtos
     const handleAddProduct = () => {
         if (result) {
-            const description = `Internet via Rádio ${result.plan.description} - Contrato ${contractTerm} meses${includeInstallation ? ' (com instalação)' : ''}`;
+            const description = `Double-Radio+Fibra ${result.plan.description} - Contrato ${contractTerm} meses${includeInstallation ? ' (com instalação)' : ''}`;
             
             setAddedProducts(prev => [...prev, {
                 id: generateUniqueId(),
-                name: `Internet via Rádio ${result.plan.description}`,
+                name: `Double-Radio+Fibra ${result.plan.description}`,
                 description,
                 unitPrice: result.monthlyPrice,
                 setup: result.installationCost,
                 monthly: result.monthlyPrice,
                 quantity: 1,
                 details: { 
-                    type: 'RADIO',
+                    type: 'DOUBLE_RADIO_FIBRA',
                     speed: selectedSpeed, 
                     contractTerm, 
                     includeInstallation,
@@ -197,22 +189,20 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
     useEffect(() => {
         const fetchProposals = async () => {
             try {
-                // Get token from localStorage as fallback
                 const token = localStorage.getItem('auth-token');
                 
-                const response = await fetch('/api/proposals?type=RADIO', {
+                const response = await fetch('/api/proposals?type=DOUBLE_RADIO_FIBRA', {
                     headers: {
                         'Content-Type': 'application/json',
-                        // Include Authorization header if token exists
                         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                     },
-                    credentials: 'include', // This will include cookies in the request
+                    credentials: 'include',
                 });
                 if (response.ok) {
                     const data = await response.json();
                     setProposals(data);
                 } else {
-                    console.error('Falha ao buscar propostas de Rádio');
+                    console.error('Falha ao buscar propostas de Double-Radio+Fibra');
                 }
             } catch (error) {
                 console.error('Erro ao conectar com a API:', error);
@@ -265,7 +255,7 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
             createdAt: new Date().toISOString(),
             user_id: userId,
             status: 'Pendente',
-            type: 'RADIO',
+            type: 'DOUBLE_RADIO_FIBRA',
         };
 
         try {
@@ -329,7 +319,7 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
     const handleSavePrices = async () => {
         try {
             const token = localStorage.getItem('auth-token');
-            const response = await fetch('/api/radio-prices', {
+            const response = await fetch('/api/double-radio-fibra-prices', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -361,7 +351,7 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
                 onAccountManagerDataChange={setAccountManagerData}
                 onBack={() => setViewMode('search')}
                 onContinue={() => setViewMode('calculator')}
-                title="Nova Proposta - Internet via Rádio"
+                title="Nova Proposta - Double-Radio+Fibra"
                 subtitle="Preencha os dados do cliente e gerente de contas para continuar."
             />
         );
@@ -373,7 +363,7 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
                 {viewMode === 'search' ? (
                     <Card className="bg-slate-900/80 border-slate-800 text-white">
                         <CardHeader>
-                            <CardTitle>Buscar Propostas - Internet via Rádio</CardTitle>
+                            <CardTitle>Buscar Propostas - Double-Radio+Fibra</CardTitle>
                             <CardDescription>Encontre propostas existentes ou crie uma nova.</CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -424,8 +414,8 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
                         <div className="mb-6">
                             <div className="flex items-center justify-between mb-4">
                                 <div>
-                                    <h1 className="text-3xl font-bold text-white">Calculadora Internet via Rádio</h1>
-                                    <p className="text-slate-400 mt-2">Configure e calcule os custos para internet via rádio enlace</p>
+                                    <h1 className="text-3xl font-bold text-white">Calculadora Double-Radio+Fibra</h1>
+                                    <p className="text-slate-400 mt-2">Configure e calcule os custos para Double-Radio+Fibra</p>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     {onBackToPanel && (
@@ -466,7 +456,7 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
                                     <Card className="bg-slate-900/80 border-slate-800 text-white">
                                         <CardHeader>
                                             <CardTitle className="flex items-center">
-                                                <Radio className="mr-2" />Internet via Rádio
+                                                <Radio className="mr-2" />Double-Radio+Fibra
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent>
@@ -626,9 +616,18 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
                                                             <span>{formatCurrency(totalMonthly)}</span>
                                                         </div>
                                                     </div>
-                                                    <Button onClick={saveProposal} className="w-full mt-4 bg-blue-600 hover:bg-blue-700">
-                                                        <Save className="mr-2 h-4 w-4" /> Salvar Proposta
-                                                    </Button>
+                                                    
+                                                    <div className="flex gap-2 mt-4">
+                                                        <Button onClick={saveProposal} className="flex-1 bg-green-600 hover:bg-green-700">
+                                                            <Save className="h-4 w-4 mr-2" />Salvar Proposta
+                                                        </Button>
+                                                        <Button onClick={handlePrint} variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700">
+                                                            <FileText className="h-4 w-4 mr-2" />Imprimir
+                                                        </Button>
+                                                        <Button onClick={cancelAction} variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700">
+                                                            Cancelar
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             )}
                                         </CardContent>
@@ -641,7 +640,7 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
                                     <CardHeader>
                                         <div className="flex justify-between items-center">
                                             <div>
-                                                <CardTitle>Tabela de Preços - Internet via Rádio</CardTitle>
+                                                <CardTitle>Tabela de Preços - Double-Radio+Fibra</CardTitle>
                                                 <CardDescription>Valores de referência baseados na velocidade e prazo do contrato.</CardDescription>
                                             </div>
                                             <div className="flex gap-2">
@@ -678,7 +677,7 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
                                             {/* Tabela Principal */}
                                             <div>
                                                 <h3 className="text-xl font-semibold mb-4 text-center">
-                                                    <span className="bg-yellow-400 text-black px-2 py-1 rounded">RÁDIO</span>
+                                                    <span className="bg-yellow-400 text-black px-2 py-1 rounded">DOUBLE-RADIO+FIBRA</span>
                                                     <span className="text-red-500 ml-2">SEM PARCEIRO INDICADOR</span>
                                                 </h3>
                                                 <div className="overflow-x-auto">
@@ -828,21 +827,6 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
                                 </Card>
                             </TabsContent>
                         </Tabs>
-
-                        {/* Botões de Ação */}
-                        <div className="flex gap-4 mt-6">
-                            <Button onClick={saveProposal} className="bg-green-600 hover:bg-green-700">
-                                <Save className="h-4 w-4 mr-2" />
-                                Salvar Proposta
-                            </Button>
-                            <Button onClick={handlePrint} variant="outline">
-                                <Download className="h-4 w-4 mr-2" />
-                                Imprimir
-                            </Button>
-                            <Button onClick={cancelAction} variant="outline">
-                                Cancelar
-                            </Button>
-                        </div>
                     </>
                 )}
             </div>
@@ -850,4 +834,4 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
     );
 };
 
-export default RadioInternetCalculator;
+export default DoubleRadioFibraCalculator;
