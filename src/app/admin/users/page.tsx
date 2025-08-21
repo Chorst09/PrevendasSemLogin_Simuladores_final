@@ -17,7 +17,7 @@ interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'diretor';
   is_active: boolean;
   created_at: string;
 }
@@ -37,7 +37,7 @@ export default function UsersManagementPage() {
     name: '',
     email: '',
     password: '',
-    role: 'user' as 'admin' | 'user',
+    role: 'user' as 'admin' | 'user' | 'diretor',
   });
 
   const router = useRouter();
@@ -268,13 +268,29 @@ export default function UsersManagementPage() {
               </div>
               <div>
                 <Label htmlFor="role">Função</Label>
-                <Select value={formData.role} onValueChange={(value: 'admin' | 'user') => setFormData({ ...formData, role: value })}>
+                <Select value={formData.role} onValueChange={(value: 'admin' | 'user' | 'diretor') => setFormData({ ...formData, role: value })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="user">Usuário</SelectItem>
-                    <SelectItem value="admin">Administrador</SelectItem>
+                    <SelectItem value="user">
+                      <div className="flex flex-col">
+                        <span>Usuário</span>
+                        <span className="text-xs text-gray-500">Acesso às próprias propostas</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="admin">
+                      <div className="flex flex-col">
+                        <span>Administrador</span>
+                        <span className="text-xs text-gray-500">Acesso total ao sistema</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="diretor">
+                      <div className="flex flex-col">
+                        <span>Diretor</span>
+                        <span className="text-xs text-gray-500">Relatórios e todas as propostas</span>
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -304,6 +320,25 @@ export default function UsersManagementPage() {
           <CardDescription>
             Lista de todos os usuários cadastrados no sistema
           </CardDescription>
+          
+          {/* Tipos de Acesso */}
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+            <h3 className="font-semibold mb-3">Tipos de Acesso por Função:</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-start space-x-2">
+                <Badge variant="default" className="mt-0.5">Admin</Badge>
+                <span className="text-gray-700">Acesso total ao sistema - Todas as funcionalidades, usuários, relatórios e configurações</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <Badge variant="outline" className="mt-0.5">Diretor</Badge>
+                <span className="text-gray-700">Acesso aos relatórios, precificação e todas as propostas dos usuários</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <Badge variant="secondary" className="mt-0.5">Usuário</Badge>
+                <span className="text-gray-700">Acesso somente às suas próprias propostas e calculadoras</span>
+              </div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -323,8 +358,12 @@ export default function UsersManagementPage() {
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
-                    <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                      {user.role === 'admin' ? 'Admin' : 'Usuário'}
+                    <Badge variant={
+                      user.role === 'admin' ? 'default' : 
+                      user.role === 'diretor' ? 'outline' : 'secondary'
+                    }>
+                      {user.role === 'admin' ? 'Admin' : 
+                       user.role === 'diretor' ? 'Diretor' : 'Usuário'}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -419,13 +458,29 @@ export default function UsersManagementPage() {
             </div>
             <div>
               <Label htmlFor="edit-role">Função</Label>
-              <Select value={formData.role} onValueChange={(value: 'admin' | 'user') => setFormData({ ...formData, role: value })}>
+              <Select value={formData.role} onValueChange={(value: 'admin' | 'user' | 'diretor') => setFormData({ ...formData, role: value })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">Usuário</SelectItem>
-                  <SelectItem value="admin">Administrador</SelectItem>
+                  <SelectItem value="user">
+                    <div className="flex flex-col">
+                      <span>Usuário</span>
+                      <span className="text-xs text-gray-500">Acesso às próprias propostas</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="admin">
+                    <div className="flex flex-col">
+                      <span>Administrador</span>
+                      <span className="text-xs text-gray-500">Acesso total ao sistema</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="diretor">
+                    <div className="flex flex-col">
+                      <span>Diretor</span>
+                      <span className="text-xs text-gray-500">Relatórios e todas as propostas</span>
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!['admin', 'user'].includes(role)) {
+    if (!['admin', 'user', 'diretor'].includes(role)) {
       return NextResponse.json(
         { error: 'Role inválido' },
         { status: 400 }
@@ -52,10 +52,15 @@ export async function POST(request: NextRequest) {
     // Hash da senha
     const passwordHash = await hashPassword(password);
 
+    // Set password_change_required to true for 'diretor' and 'user' roles
+    const passwordChangeRequired = ['diretor', 'user'].includes(role);
+    
     // Inserir novo usuário
     const result = await pool.query(
-      'INSERT INTO users (email, password_hash, name, role) VALUES ($1, $2, $3, $4) RETURNING id, email, name, role, created_at',
-      [email, passwordHash, name, role]
+      `INSERT INTO users (email, password_hash, name, role, password_change_required) 
+       VALUES ($1, $2, $3, $4, $5) 
+       RETURNING id, email, name, role, created_at, password_change_required`,
+      [email, passwordHash, name, role, passwordChangeRequired]
     );
 
     const newUser = result.rows[0];
@@ -68,6 +73,7 @@ export async function POST(request: NextRequest) {
         name: newUser.name,
         role: newUser.role,
         created_at: newUser.created_at,
+        password_change_required: newUser.password_change_required,
       },
     }, { status: 201 });
   } catch (error) {

@@ -6,6 +6,7 @@ import { Proposal } from '@/types';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
+import Image from 'next/image';
 
 interface DashboardViewProps {
   userId: string;
@@ -77,9 +78,26 @@ const DashboardView: React.FC<DashboardViewProps> = ({ userId }) => {
         fetchProposals();
     }, [token]);
 
+    // Estilo de fundo com fallback em CSS puro
+    const backgroundStyle = {
+        minHeight: '100vh',
+        position: 'relative' as const,
+        backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url("/images/server-background.jpg")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+        backgroundColor: '#0f172a', // Cor de fallback
+    };
+
     return (
-        <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div style={backgroundStyle}>
+            {/* Overlay para melhorar legibilidade */}
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-[1px] -z-10"></div>
+            
+            {/* Conteúdo do dashboard */}
+            <div className="relative z-10 space-y-8 p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard icon={<Phone className="w-6 h-6 text-blue-500" />} title="Propostas PABX/SIP" value={proposalCounts.pabx.toString()} subtext="Suas propostas" />
                 <StatCard icon={<Server className="w-6 h-6 text-purple-500" />} title="Propostas Máquinas Virtuais" value={proposalCounts.vm.toString()} subtext="Suas propostas" />
                 <StatCard icon={<Wifi className="w-6 h-6 text-green-500" />} title="Propostas Link Fibra" value={proposalCounts.fiber.toString()} subtext="Suas propostas" />
@@ -122,6 +140,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ userId }) => {
                         </ResponsiveContainer>
                     </CardContent>
                 </Card>
+                </div>
             </div>
         </div>
     );

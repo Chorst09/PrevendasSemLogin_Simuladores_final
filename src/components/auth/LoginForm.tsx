@@ -25,6 +25,7 @@ export default function LoginForm() {
     console.log('Login attempt started', { email, password: '***' });
 
     try {
+      console.log('Iniciando requisição de login para:', email);
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -33,9 +34,24 @@ export default function LoginForm() {
         body: JSON.stringify({ email, password }),
       });
 
-      console.log('Response status:', response.status);
-      const data = await response.json();
-      console.log('Response data:', data);
+      console.log('Status da resposta:', response.status);
+      
+      // Verificar se a resposta é JSON
+      const contentType = response.headers.get('content-type');
+      console.log('Content-Type da resposta:', contentType);
+      
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Resposta inesperada (não é JSON):', text.substring(0, 200));
+        throw new Error('Resposta do servidor não é um JSON válido');
+      }
+      
+      const data = await response.json().catch(error => {
+        console.error('Erro ao fazer parse do JSON:', error);
+        throw new Error('Erro ao processar a resposta do servidor');
+      });
+      
+      console.log('Dados da resposta:', data);
 
       if (!response.ok) {
         console.log('Login failed:', data.error);
@@ -49,7 +65,15 @@ export default function LoginForm() {
         console.log('Token saved successfully');
       }
 
-      console.log('User role:', data.user.role);
+      console.log('User data:', data.user);
+      
+      // Verificar se é necessário alterar a senha
+      if (data.requiresPasswordChange) {
+        console.log('Password change required, redirecting to /change-password');
+        router.push('/change-password');
+        return;
+      }
+
       // Redirecionar baseado no role
       if (data.user.role === 'admin') {
         console.log('Redirecting to /admin');
@@ -114,17 +138,10 @@ export default function LoginForm() {
           </form>
           
           <div className="mt-4 flex justify-between text-sm">
-            <Link href="/signup" className="underline">
-              Não tem uma conta? Cadastre-se
-            </Link>
+            {/* Removed the 'Não tem uma conta? Cadastre-se' link as requested */}
             <Link href="/forgot-password" className="underline">
               Esqueci a senha
             </Link>
-          </div>
-          <div className="mt-4 text-sm text-gray-600">
-            <p>Usuário admin padrão:</p>
-            <p>Email: admin@nextn.com</p>
-            <p>Senha: admin123</p>
           </div>
         </CardContent>
       </Card>

@@ -14,7 +14,6 @@ import { Phone, PhoneForwarded } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Proposal, ProposalItem, ClientData, AccountManagerData } from '@/types';
 import { useAuth } from '@/hooks/use-auth';
-import DREComponent from '@/components/calculators/DREComponent';
 
 // Interfaces
 interface PABXResult {
@@ -36,7 +35,7 @@ type SIPPriceKey = '5' | '10' | '20' | '30';
 type DTRPriceKey = '4' | '10' | '30';
 
 interface PABXSIPCalculatorProps {
-    userRole?: 'admin' | 'diretor' | 'user';
+    userRole?: 'admin' | 'user';
     onBackToPanel?: () => void;
     userId: string;
     userEmail: string;
@@ -105,7 +104,6 @@ const PABXSIPCalculator: React.FC<PABXSIPCalculatorProps> = ({ userRole, onBackT
 
     // Estados para Período do Contrato
     const [contractPeriod, setContractPeriod] = useState<number>(12);
-    const [hasPartnerIndicator, setHasPartnerIndicator] = useState<boolean>(false);
 
 
     useEffect(() => {
@@ -360,7 +358,6 @@ const PABXSIPCalculator: React.FC<PABXSIPCalculatorProps> = ({ userRole, onBackT
             totalSetup: totalSetup,
             totalMonthly: totalMonthly,
             contractPeriod: contractPeriod,
-            partnerIndicator: hasPartnerIndicator,
             status: 'Pendente',
             type: 'PABX_SIP',
             createdAt: new Date().toISOString(),
@@ -382,57 +379,38 @@ const PABXSIPCalculator: React.FC<PABXSIPCalculatorProps> = ({ userRole, onBackT
 
             if (response.ok) {
                 const data = await response.json();
-                alert('Proposta salva com sucesso!');
-                // Recarregar lista de propostas após salvar
-                setCurrentView('search');
+                setSavedProposals(data);
             } else {
-                console.warn('Falha ao salvar proposta:', response.status);
-                alert('Erro ao salvar proposta. Tente novamente.');
+                console.error('Falha ao buscar propostas');
             }
         } catch (error) {
-            console.warn('Erro ao salvar proposta:', error);
-            alert(`Erro ao salvar proposta: ${error instanceof Error ? error.message : 'Serviço temporariamente indisponível'}`);
+            console.error('Erro ao conectar com a API:', error);
+            console.error('Erro ao salvar proposta:', error);
+            alert(`Erro ao salvar proposta: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
         }
     };
 
     // Carregar propostas da API
     useEffect(() => {
         const fetchProposals = async () => {
-            if (!token) {
-                setSavedProposals([]);
-                return;
-            }
+            if (!token) return;
             
             try {
                 const response = await fetch('/api/proposals?type=PABX_SIP', {
-                    method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json',
                     },
                     credentials: 'include',
                 });
-                
                 if (response.ok) {
                     const data = await response.json();
-                    setSavedProposals(Array.isArray(data) ? data : []);
-                } else if (response.status === 403) {
-                    // Erro de permissão - usuário pode não ter acesso
-                    console.info('Acesso negado às propostas. Usuário pode não ter permissões necessárias.');
-                    setSavedProposals([]);
-                } else if (response.status === 404) {
-                    // API não encontrada - modo offline
-                    console.info('API de propostas não disponível. Funcionando em modo offline.');
-                    setSavedProposals([]);
+                    setSavedProposals(data);
                 } else {
-                    // Outros erros HTTP
-                    console.warn(`Erro HTTP ${response.status} ao buscar propostas`);
-                    setSavedProposals([]);
+                    console.error('Falha ao buscar propostas');
                 }
             } catch (error) {
-                // Erro de rede ou conexão
-                console.info('API de propostas indisponível. Funcionando em modo offline.');
-                setSavedProposals([]);
+                console.error('Erro ao conectar com a API:', error);
             }
         };
 
@@ -647,9 +625,6 @@ const PABXSIPCalculator: React.FC<PABXSIPCalculatorProps> = ({ userRole, onBackT
                                                         setAccountManagerData(proposal.accountManager || { name: '', email: '', phone: '' });
                                                         setProposalItems(proposal.products || []);
                                                         setContractPeriod(proposal.contractPeriod || 12);
-                                                        // Flag Parceiro Indicador
-                                                        // @ts-expect-error campo pode não existir em propostas antigas
-                                                        setHasPartnerIndicator(!!(proposal as any).partnerIndicator);
                                                         setCurrentView('calculator');
                                                     }}
                                                 >
@@ -785,24 +760,6 @@ const PABXSIPCalculator: React.FC<PABXSIPCalculatorProps> = ({ userRole, onBackT
                                     />
                                     <Label htmlFor="pabx-include-ai">Incluir Agente IA</Label>
                                 </div>
-
-                                {pabxIncludeAI && (
-                                    <div>
-                                        <Label htmlFor="contract-period">Período do Contrato (meses)</Label>
-                                        <Select value={contractPeriod.toString()} onValueChange={(value) => setContractPeriod(parseInt(value))}>
-                                            <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent className="bg-slate-800 border-slate-700">
-                                                <SelectItem value="12">12 meses</SelectItem>
-                                                <SelectItem value="24">24 meses</SelectItem>
-                                                <SelectItem value="36">36 meses</SelectItem>
-                                                <SelectItem value="48">48 meses</SelectItem>
-                                                <SelectItem value="60">60 meses</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                )}
 
                                 {pabxIncludeAI && (
                                     <div>
@@ -1002,19 +959,6 @@ const PABXSIPCalculator: React.FC<PABXSIPCalculatorProps> = ({ userRole, onBackT
                                             </Button>
                                         ))}
                                     </div>
-                                </div>
-
-                                {/* Checkbox Parceiro Indicador */}
-                                <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                        id="partner-indicator"
-                                        checked={hasPartnerIndicator}
-                                        onCheckedChange={(checked) => setHasPartnerIndicator(!!checked)}
-                                        className="border-slate-600 data-[state=checked]:bg-blue-600"
-                                    />
-                                    <Label htmlFor="partner-indicator" className="text-slate-300 text-sm">
-                                        Parceiro Indicador (exclui comissão do vendedor)
-                                    </Label>
                                 </div>
                             </div>
                         </CardContent>
@@ -1483,24 +1427,180 @@ const PABXSIPCalculator: React.FC<PABXSIPCalculatorProps> = ({ userRole, onBackT
                         </Card>
                     </div>
                 </TabsContent>
-                </>
-                }
 
                 {userRole === 'admin' && (
                     <TabsContent value="dre">
-                        <DREComponent
-                            monthlyRevenue={(pabxResult?.totalMonthly || 0) + (sipResult?.monthly || 0)}
-                            setupRevenue={(pabxResult?.setup || 0) + (sipResult?.setup || 0)}
-                            contractPeriod={contractPeriod}
-                            projectCost={0}
-                            installationRate={0}
-                            hasPartnerIndicator={hasPartnerIndicator}
-                        />
-                    </TabsContent>
-                )}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                            {/* Tabela de Comissão Vendedores */}
+                            <Card className="bg-slate-900/80 border-slate-800 text-white">
+                            <CardHeader>
+                                <CardTitle className="text-blue-400">Tabela Comissão Vendedores</CardTitle>
+                                <CardDescription className="text-slate-400">
+                                    Percentuais de comissão por período de contrato
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="border-slate-700">
+                                            <TableHead className="text-white bg-blue-800">Meses</TableHead>
+                                            <TableHead className="text-white bg-blue-800 text-center">% Comissão</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {dreCommissionTable.map((item) => (
+                                            <TableRow key={item.months} className="border-slate-800">
+                                                <TableCell className="font-medium">{item.months}</TableCell>
+                                                <TableCell className="text-center">{item.commission}%</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+
+                        {/* DRE - Demonstrativo de Resultado */}
+                        <Card className="bg-slate-900/80 border-slate-800 text-white">
+                            <CardHeader>
+                                <CardTitle className="text-green-400">DRE - Demonstrativo de Resultado</CardTitle>
+                                <CardDescription className="text-slate-400">
+                                    Análise financeira baseada nos valores calculados
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {/* Período do Contrato */}
+                                <div>
+                                    <Label>Período do Contrato (meses)</Label>
+                                    <div className="flex gap-2 mt-2">
+                                        {[12, 24, 36, 48, 60].map((months) => (
+                                            <Button
+                                                key={months}
+                                                variant={contractPeriod === months ? "default" : "outline"}
+                                                size="sm"
+                                                onClick={() => setContractPeriod(months)}
+                                                className={contractPeriod === months 
+                                                    ? "bg-blue-600 hover:bg-blue-700" 
+                                                    : "border-slate-600 text-slate-300 hover:bg-slate-700"
+                                                }
+                                            >
+                                                {months}m
+                                            </Button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Cálculos DRE */}
+                                {(pabxResult || sipResult) && (
+                                    <div className="bg-slate-800 p-4 rounded-lg space-y-3">
+                                        <h3 className="font-semibold text-white mb-3">Análise Financeira</h3>
+                                        
+                                        {/* Receita Bruta */}
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-300">Receita Mensal Bruta:</span>
+                                            <span className="font-semibold text-green-400">
+                                                {formatCurrency((pabxResult?.totalMonthly || 0) + (sipResult?.monthly || 0))}
+                                            </span>
+                                        </div>
+
+                                        {/* Receita Total do Contrato */}
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-300">Receita Total ({contractPeriod} meses):</span>
+                                            <span className="font-semibold text-green-400">
+                                                {formatCurrency(((pabxResult?.totalMonthly || 0) + (sipResult?.monthly || 0)) * contractPeriod)}
+                                            </span>
+                                        </div>
+
+                                        {/* Setup */}
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-300">Taxa de Setup:</span>
+                                            <span className="font-semibold text-blue-400">
+                                                {formatCurrency((pabxResult?.setup || 0) + (sipResult?.setup || 0))}
+                                            </span>
+                                        </div>
+
+                                        <Separator className="bg-slate-600" />
+
+                                        {/* Comissão do Vendedor */}
+                                        {(() => {
+                                            const commission = dreCommissionTable.find(c => c.months === contractPeriod)?.commission || 0;
+                                            const monthlyRevenue = (pabxResult?.totalMonthly || 0) + (sipResult?.monthly || 0);
+                                            const commissionValue = (monthlyRevenue * contractPeriod * commission) / 100;
+                                            
+                                            return (
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-slate-300">Comissão Vendedor ({commission}%):</span>
+                                                        <span className="font-semibold text-yellow-400">
+                                                            {formatCurrency(commissionValue)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
+
+                                        {/* Receita Líquida */}
+                                        {(() => {
+                                            const commission = dreCommissionTable.find(c => c.months === contractPeriod)?.commission || 0;
+                                            const monthlyRevenue = (pabxResult?.totalMonthly || 0) + (sipResult?.monthly || 0);
+                                            const totalRevenue = monthlyRevenue * contractPeriod;
+                                            const setupRevenue = (pabxResult?.setup || 0) + (sipResult?.setup || 0);
+                                            const commissionValue = (totalRevenue * commission) / 100;
+                                            const netRevenue = totalRevenue + setupRevenue - commissionValue;
+                                            const monthlyNetRevenue = netRevenue / contractPeriod;
+                                            
+                                            return (
+                                                <>
+                                                    <div className="flex justify-between items-center pt-2 border-t border-slate-600">
+                                                        <span className="text-slate-300 font-semibold">Receita Líquida Total:</span>
+                                                        <span className="font-bold text-green-300 text-lg">
+                                                            {formatCurrency(netRevenue)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-slate-300">Receita Líquida Mensal Média:</span>
+                                                        <span className="font-semibold text-green-300">
+                                                            {formatCurrency(monthlyNetRevenue)}
+                                                        </span>
+                                                    </div>
+                                                </>
+                                            );
+                                        })()}
+
+                                        {/* Margem Líquida */}
+                                        {(() => {
+                                            const commission = dreCommissionTable.find(c => c.months === contractPeriod)?.commission || 0;
+                                            const monthlyRevenue = (pabxResult?.totalMonthly || 0) + (sipResult?.monthly || 0);
+                                            const totalRevenue = monthlyRevenue * contractPeriod;
+                                            const setupRevenue = (pabxResult?.setup || 0) + (sipResult?.setup || 0);
+                                            const grossRevenue = totalRevenue + setupRevenue;
+                                            const commissionValue = (totalRevenue * commission) / 100;
+                                            const netRevenue = grossRevenue - commissionValue;
+                                            const marginPercentage = grossRevenue > 0 ? ((netRevenue / grossRevenue) * 100) : 0;
+                                            
+                                            return (
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-slate-300">Margem Líquida:</span>
+                                                    <span className="font-semibold text-green-300">
+                                                        {marginPercentage.toFixed(1)}%
+                                                    </span>
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                )}
+
+                                {!pabxResult && !sipResult && (
+                                    <div className="text-center py-8 text-slate-400">
+                                        <p>Configure um serviço PABX ou SIP na aba Calculadora para ver a análise DRE</p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                </TabsContent>
             </Tabs>
-            </div>
-        );
+        </div>
+    );
 };
 
 export default PABXSIPCalculator;

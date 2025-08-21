@@ -6,13 +6,27 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Rotas públicas que não precisam de autenticação
-  const publicRoutes = ['/login', '/signup', '/forgot-password', '/reset-password', '/api/auth/login', '/api/auth/signup', '/api/auth/forgot-password', '/api/auth/reset-password'];
+  const publicRoutes = [
+    '/login', 
+    '/signup', 
+    '/forgot-password', 
+    '/reset-password',
+    '/change-password',
+    '/api/auth/login', 
+    '/api/auth/signup', 
+    '/api/auth/forgot-password', 
+    '/api/auth/reset-password',
+    '/api/auth/change-password'
+  ];
   
   // Rotas que precisam de autenticação
   const protectedRoutes = ['/', '/app', '/admin', '/dashboard', '/api/users'];
   
   // Rotas que precisam de permissão de admin
   const adminRoutes = ['/admin', '/api/users', '/api/auth/register'];
+  
+  // Rotas que podem ser acessadas mesmo quando é necessário alterar a senha
+  const passwordChangeAllowedRoutes = ['/change-password', '/api/auth/change-password', '/logout', '/api/auth/logout'];
 
   // Verificar se é uma rota pública
   if (publicRoutes.some(route => pathname.startsWith(route))) {
@@ -49,17 +63,29 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
+    // Verificar se o usuário precisa alterar a senha
+    console.log('[Middleware] Verificando se o usuário precisa alterar a senha...');
+    console.log('[Middleware] payload.password_change_required:', payload.password_change_required);
+    console.log('[Middleware] pathname:', pathname);
+    console.log('[Middleware] passwordChangeAllowedRoutes:', passwordChangeAllowedRoutes);
+    
+    if (payload.password_change_required && !passwordChangeAllowedRoutes.some(route => pathname.startsWith(route))) {
+      console.log('[Middleware] Usuário precisa alterar a senha. Redirecionando para /change-password');
+      const redirectUrl = new URL('/change-password', request.url);
+      console.log('[Middleware] URL de redirecionamento:', redirectUrl.toString());
+      return NextResponse.redirect(redirectUrl);
+    }
+
     // Verificar se precisa de permissão de admin
-    if (adminRoutes.some(route => pathname.startsWith(route))) {
-      if (payload.role !== 'admin') {
-        if (pathname.startsWith('/api/')) {
-          return NextResponse.json(
-            { error: 'Permissão insuficiente' },
-            { status: 403 }
-          );
-        }
-        return NextResponse.redirect(new URL('/dashboard', request.url));
+    if (adminRoutes.some(route => pathname.startsWith(route)) && payload.role !== 'admin') {
+      console.log('[Middleware] Acesso não autorizado a rota de admin.');
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json(
+          { error: 'Acesso não autorizado' },
+          { status: 403 }
+        );
       }
+      return NextResponse.redirect(new URL('/app', request.url));
     }
 
     // Adicionar informações do usuário aos headers para as API routes

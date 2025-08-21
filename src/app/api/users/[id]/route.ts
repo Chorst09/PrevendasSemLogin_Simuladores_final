@@ -95,7 +95,7 @@ export async function PUT(
       values.push(email);
     }
 
-    if (role !== undefined && ['admin', 'user'].includes(role)) {
+    if (role !== undefined && ['admin', 'user', 'diretor'].includes(role)) {
       updates.push(`role = $${paramCount++}`);
       values.push(role);
     }

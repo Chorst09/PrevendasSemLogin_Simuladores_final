@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Calculator, FileText, Settings, Server, Plus, Search, Trash2, Eye, Download, Edit, Cpu, MemoryStick, HardDrive, Network, Monitor, Save, BrainCircuit as Brain } from "lucide-react";
+import { Calculator, FileText, Settings, Server, Plus, Search, Trash2, Eye, Download, Edit, Cpu, MemoryStick, HardDrive, Network, Monitor, Save, BrainCircuit as Brain, TrendingUp } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ClientManagerForm } from './ClientManagerForm';
 import { ClientManagerInfo } from './ClientManagerInfo';
@@ -89,7 +89,19 @@ const MaquinasVirtuaisCalculator: React.FC<MaquinasVirtuaisCalculatorProps> = ({
     // Estados para configurações de preço (removidos duplicados)
     const [estimatedNetMargin, setEstimatedNetMargin] = useState<number>(0);
 
-    // Estado para controle de abas
+    // Estados para DRE
+    const [dreCommissionTable] = useState([
+        { months: 12, commission: 1.2 },
+        { months: 24, commission: 2.4 },
+        { months: 36, commission: 3.6 },
+        { months: 48, commission: 4.0 },
+        { months: 60, commission: 5.0 }
+    ]);
+
+    // Estados para Período do Contrato
+    const [contractPeriod, setContractPeriod] = useState<number>(12);
+
+    // Estados para salvar propostarole de abas
     const [activeTab, setActiveTab] = useState<string>('calculator');
 
     // Estados para configuração de VM
@@ -527,9 +539,14 @@ const MaquinasVirtuaisCalculator: React.FC<MaquinasVirtuaisCalculatorProps> = ({
                         />
                         <Separator className="my-6" />
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                            <TabsList className="grid w-full grid-cols-3 no-print">
+                            <TabsList className={`grid w-full ${userRole === 'admin' ? 'grid-cols-4' : 'grid-cols-2'} no-print`}>
                                 <TabsTrigger value="calculator"> <Calculator className="h-4 w-4 mr-2" />Calculadora</TabsTrigger>
-                                <TabsTrigger value="configurations"> <Settings className="h-4 w-4 mr-2" />Configurações/Lista de Preços</TabsTrigger>
+                                {userRole === 'admin' && (
+                                    <TabsTrigger value="dre"> <TrendingUp className="h-4 w-4 mr-2" />DRE</TabsTrigger>
+                                )}
+                                {userRole === 'admin' && (
+                                    <TabsTrigger value="configurations"> <Settings className="h-4 w-4 mr-2" />Configurações/Lista de Preços</TabsTrigger>
+                                )}
                                 <TabsTrigger value="proposal"> <FileText className="h-4 w-4 mr-2" />Resumo da Proposta</TabsTrigger>
                             </TabsList>
                             <TabsContent value="calculator">
@@ -770,42 +787,184 @@ const MaquinasVirtuaisCalculator: React.FC<MaquinasVirtuaisCalculatorProps> = ({
                                                 </div>
                                             </CardContent>
                                         </Card>
-                                        
-                                        {userRole === 'admin' && (
-                                            <Card>
-                                                <CardHeader>
-                                                    <CardTitle>Configurações de Administrador</CardTitle>
-                                                </CardHeader>
-                                                <CardContent className="space-y-4">
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div className="space-y-2">
-                                                            <Label>Markup (%)</Label>
-                                                            <Input type="number" value={markup} onChange={(e) => setMarkup(Number(e.target.value))} />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label>Margem Líquida Estimada</Label>
-                                                            <Input value={`${estimatedNetMargin.toFixed(2)}%`} readOnly />
-                                                        </div>
-                                                    </div>
-                                                    {/* Outras configurações de admin podem ir aqui */}
-                                                    <div className="space-y-2 pt-4">
-                                                        <Label>Regime Tributário</Label>
-                                                        <RadioGroup value={selectedTaxRegime} onValueChange={handleTaxRegimeChange} className="flex space-x-4">
-                                                            <div className="flex items-center space-x-2"><RadioGroupItem value="lucro_real" id="lr" /><Label htmlFor="lr">Lucro Real</Label></div>
-                                                            <div className="flex items-center space-x-2"><RadioGroupItem value="lucro_presumido" id="lp" /><Label htmlFor="lp">Lucro Presumido</Label></div>
-                                                        </RadioGroup>
-                                                        <div className="mt-4 p-2 border rounded-md bg-gray-100">
-                                                            <p className="text-sm">PIS/COFINS: {pisCofins}%</p>
-                                                            <p className="text-sm">ISS: {iss}%</p>
-                                                            <p className="text-sm">CSLL/IR: {csllIr}%</p>
-                                                            <p className="text-sm font-bold">Total: {totalTaxes.toFixed(2)}%</p>
-                                                        </div>
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        )}
                                     </div>
                                 </div>
+                            </TabsContent>
+                            <TabsContent value="dre">
+                                <Card className="bg-slate-900/80 border-slate-800 text-white">
+                                    <CardHeader>
+                                        <CardTitle className="text-blue-400 flex items-center">
+                                            <TrendingUp className="mr-2 h-5 w-5"/>
+                                            DRE - Demonstrativo de Resultado do Exercício
+                                        </CardTitle>
+                                        <p className="text-slate-400 text-sm">Análise financeira e comissões por período de contrato</p>
+                                    </CardHeader>
+                                    <CardContent className="space-y-6">
+                                        {/* Tabela de Comissões */}
+                                        <div>
+                                            <h3 className="text-lg font-semibold text-slate-200 mb-4">Tabela de Comissões por Período</h3>
+                                            <div className="grid grid-cols-5 gap-4 mb-6">
+                                                {dreCommissionTable.map((item) => (
+                                                    <Button
+                                                        key={item.months}
+                                                        variant={contractPeriod === item.months ? "default" : "outline"}
+                                                        onClick={() => setContractPeriod(item.months)}
+                                                        className={contractPeriod === item.months 
+                                                            ? "bg-blue-600 hover:bg-blue-700" 
+                                                            : "border-slate-600 text-slate-300 hover:bg-slate-700"
+                                                        }
+                                                    >
+                                                        {item.months}m
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                            <div className="bg-slate-800/50 rounded-lg p-4">
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow className="border-slate-700">
+                                                            <TableHead className="text-slate-300">Período (meses)</TableHead>
+                                                            <TableHead className="text-slate-300">Comissão (%)</TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {dreCommissionTable.map((item) => (
+                                                            <TableRow key={item.months} className="border-slate-700">
+                                                                <TableCell className="text-slate-200">{item.months}</TableCell>
+                                                                <TableCell className="text-slate-200">{item.commission}%</TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
+                                        </div>
+
+                                        {/* Análise Financeira */}
+                                        <div>
+                                            <h3 className="text-lg font-semibold text-slate-200 mb-4">Análise Financeira</h3>
+                                            <div className="bg-slate-800/50 rounded-lg p-6 space-y-4">
+                                                {/* Receita Bruta Mensal */}
+                                                {(() => {
+                                                    const monthlyRevenue = totalMonthly;
+                                                    const commission = dreCommissionTable.find(c => c.months === contractPeriod)?.commission || 0;
+                                                    
+                                                    return (
+                                                        <div className="space-y-2">
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-slate-300">Receita Bruta Mensal:</span>
+                                                                <span className="font-semibold text-green-300">
+                                                                    {new Intl.NumberFormat('pt-BR', {
+                                                                        style: 'currency',
+                                                                        currency: 'BRL',
+                                                                    }).format(monthlyRevenue)}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-slate-300">Receita Total do Contrato ({contractPeriod}m):</span>
+                                                                <span className="font-semibold text-green-300">
+                                                                    {new Intl.NumberFormat('pt-BR', {
+                                                                        style: 'currency',
+                                                                        currency: 'BRL',
+                                                                    }).format(monthlyRevenue * contractPeriod)}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-slate-300">Taxa de Setup:</span>
+                                                                <span className="font-semibold text-green-300">
+                                                                    {new Intl.NumberFormat('pt-BR', {
+                                                                        style: 'currency',
+                                                                        currency: 'BRL',
+                                                                    }).format(totalSetup)}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })()}
+
+                                                {/* Comissão do Vendedor */}
+                                                {(() => {
+                                                    const monthlyRevenue = totalMonthly;
+                                                    const commission = dreCommissionTable.find(c => c.months === contractPeriod)?.commission || 0;
+                                                    const commissionValue = (monthlyRevenue * contractPeriod * commission) / 100;
+                                                    
+                                                    return (
+                                                        <div className="space-y-2">
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-slate-300">Comissão Vendedor ({commission}%):</span>
+                                                                <span className="font-semibold text-red-300">
+                                                                    -{new Intl.NumberFormat('pt-BR', {
+                                                                        style: 'currency',
+                                                                        currency: 'BRL',
+                                                                    }).format(commissionValue)}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })()}
+
+                                                {/* Receita Líquida Total */}
+                                                {(() => {
+                                                    const monthlyRevenue = totalMonthly;
+                                                    const totalRevenue = monthlyRevenue * contractPeriod;
+                                                    const setupRevenue = totalSetup;
+                                                    const commission = dreCommissionTable.find(c => c.months === contractPeriod)?.commission || 0;
+                                                    const commissionValue = (totalRevenue * commission) / 100;
+                                                    const netRevenue = totalRevenue + setupRevenue - commissionValue;
+                                                    const monthlyNetRevenue = netRevenue / contractPeriod;
+                                                    
+                                                    return (
+                                                        <>
+                                                            <div className="flex justify-between items-center pt-2 border-t border-slate-600">
+                                                                <span className="text-slate-300 font-semibold">Receita Líquida Total:</span>
+                                                                <span className="font-bold text-green-300 text-lg">
+                                                                    {new Intl.NumberFormat('pt-BR', {
+                                                                        style: 'currency',
+                                                                        currency: 'BRL',
+                                                                    }).format(netRevenue)}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-slate-300">Receita Líquida Mensal Média:</span>
+                                                                <span className="font-semibold text-green-300">
+                                                                    {new Intl.NumberFormat('pt-BR', {
+                                                                        style: 'currency',
+                                                                        currency: 'BRL',
+                                                                    }).format(monthlyNetRevenue)}
+                                                                </span>
+                                                            </div>
+                                                        </>
+                                                    );
+                                                })()}
+
+                                                {/* Margem Líquida */}
+                                                {(() => {
+                                                    const monthlyRevenue = totalMonthly;
+                                                    const totalRevenue = monthlyRevenue * contractPeriod;
+                                                    const setupRevenue = totalSetup;
+                                                    const grossRevenue = totalRevenue + setupRevenue;
+                                                    const commission = dreCommissionTable.find(c => c.months === contractPeriod)?.commission || 0;
+                                                    const commissionValue = (totalRevenue * commission) / 100;
+                                                    const netRevenue = grossRevenue - commissionValue;
+                                                    const marginPercentage = grossRevenue > 0 ? ((netRevenue / grossRevenue) * 100) : 0;
+                                                    
+                                                    return (
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-slate-300">Margem Líquida:</span>
+                                                            <span className="font-semibold text-green-300">
+                                                                {marginPercentage.toFixed(2)}%
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })()}
+
+                                                {!totalMonthly && (
+                                                    <div className="text-center py-8 text-slate-400">
+                                                        <p>Configure uma máquina virtual na aba Calculadora para ver a análise DRE</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             </TabsContent>
                             <TabsContent value="configurations">
                                 <div className="space-y-6">

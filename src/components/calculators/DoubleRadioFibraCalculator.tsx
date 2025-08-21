@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { Proposal, ProposalItem, ClientData, AccountManagerData } from '@/types';
 import { ClientManagerForm } from './ClientManagerForm';
+import DREComponent from './DREComponent';
 
 // Interfaces
 interface RadioPlan {
@@ -73,6 +74,11 @@ const DoubleRadioFibraCalculator: React.FC<DoubleRadioFibraCalculatorProps> = ({
     const [contractTerm, setContractTerm] = useState<number>(12);
     const [includeInstallation, setIncludeInstallation] = useState<boolean>(true);
     const [projectValue, setProjectValue] = useState<number>(0);
+    const [isExistingClient, setIsExistingClient] = useState<boolean>(false);
+    const [previousMonthlyFee, setPreviousMonthlyFee] = useState<number>(0);
+    const [hasLastMile, setHasLastMile] = useState<boolean>(false);
+    const [lastMileCost, setLastMileCost] = useState<number>(0);
+    const [hasPartnerIndicator, setHasPartnerIndicator] = useState<boolean>(false);
     
     // Estados para edição de preços
     const [isEditingPrices, setIsEditingPrices] = useState<boolean>(false);
@@ -123,8 +129,29 @@ const DoubleRadioFibraCalculator: React.FC<DoubleRadioFibraCalculatorProps> = ({
 
     const getInstallationCost = (speed: number): number => {
         const plan = radioPlans.find(p => p.speed === speed);
+        if (!plan) return 0;
+        
+        let baseCost: number;
+        
+        // Se há valor do projeto, calcular baseado nas faixas
+        if (projectValue > 0) {
+            const installationTiers: InstallationTier[] = [
+                { minValue: 0, maxValue: 4500, cost: 998.00 },
+                { minValue: 4500.01, maxValue: 8000, cost: 1996.00 },
+                { minValue: 8000.01, maxValue: Infinity, cost: 2500.00 }
+            ];
+            
+            const tier = installationTiers.find(t => 
+                projectValue >= t.minValue && projectValue <= t.maxValue
+            );
+            baseCost = tier ? tier.cost : plan.installationCost;
+        } else {
+            // Caso contrário, usar o custo padrão do plano
+            baseCost = plan.installationCost;
+        }
+        
         // Apply 2x multiplier for Double-Radio+Fibra installation cost
-        return plan ? plan.installationCost * 2 : 0;
+        return baseCost * 2;
     };
 
     const calculateResult = () => {
@@ -445,8 +472,9 @@ const DoubleRadioFibraCalculator: React.FC<DoubleRadioFibraCalculatorProps> = ({
                         </div>
 
                         <Tabs defaultValue="calculator" className="w-full">
-                            <TabsList className={`grid w-full ${userRole === 'admin' ? 'grid-cols-2' : 'grid-cols-1'} bg-slate-800`}>
+                            <TabsList className={`grid w-full ${userRole === 'admin' ? 'grid-cols-3' : 'grid-cols-1'} bg-slate-800`}>
                                 <TabsTrigger value="calculator">Calculadora</TabsTrigger>
+                                {userRole === 'admin' && <TabsTrigger value="dre">DRE</TabsTrigger>}
                                 {userRole === 'admin' && <TabsTrigger value="list-price">Tabela de Preços</TabsTrigger>}
                             </TabsList>
                             
@@ -506,6 +534,89 @@ const DoubleRadioFibraCalculator: React.FC<DoubleRadioFibraCalculatorProps> = ({
                                                     />
                                                     <label htmlFor="includeInstallation" className="text-sm font-medium leading-none">
                                                         Incluir Taxa de Instalação
+                                                    </label>
+                                                </div>
+
+                                                <div className="flex items-center space-x-2 pt-2">
+                                                    <Checkbox
+                                                        id="isExistingClient"
+                                                        checked={isExistingClient}
+                                                        onCheckedChange={(checked) => setIsExistingClient(!!checked)}
+                                                        className="border-white"
+                                                    />
+                                                    <label htmlFor="isExistingClient" className="text-sm font-medium leading-none">
+                                                        Já é cliente da base?
+                                                    </label>
+                                                </div>
+
+                                                {isExistingClient && (
+                                                    <div className="space-y-4">
+                                                        <div>
+                                                            <Label htmlFor="previousMonthlyFee">Mensalidade Anterior</Label>
+                                                            <Input
+                                                                id="previousMonthlyFee"
+                                                                type="number"
+                                                                placeholder="R$ 0,00"
+                                                                value={previousMonthlyFee}
+                                                                onChange={(e) => setPreviousMonthlyFee(Number(e.target.value))}
+                                                                className="bg-slate-700 border-slate-600"
+                                                            />
+                                                        </div>
+                                                        {previousMonthlyFee > 0 && result && (
+                                                            <div>
+                                                                <Label>Diferença (Valor Mensal - Mensalidade Anterior)</Label>
+                                                                <div className={`p-3 rounded-md border ${
+                                                                    (result.monthlyPrice - previousMonthlyFee) >= 0 
+                                                                        ? 'bg-green-900/20 border-green-600 text-green-300'
+                                                                        : 'bg-red-900/20 border-red-600 text-red-300'
+                                                                }`}>
+                                                                    <span className="font-semibold">
+                                                                        {formatCurrency(result.monthlyPrice - previousMonthlyFee)}
+                                                                    </span>
+                                                                    <span className="text-sm ml-2">
+                                                                        ({(result.monthlyPrice - previousMonthlyFee) >= 0 ? 'Aumento' : 'Redução'})
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                <div className="flex items-center space-x-2 pt-2">
+                                                    <Checkbox
+                                                        id="hasLastMile"
+                                                        checked={hasLastMile}
+                                                        onCheckedChange={(checked) => setHasLastMile(!!checked)}
+                                                        className="border-white"
+                                                    />
+                                                    <label htmlFor="hasLastMile" className="text-sm font-medium leading-none">
+                                                        Last Mile?
+                                                    </label>
+                                                </div>
+
+                                                {hasLastMile && (
+                                                    <div>
+                                                        <Label htmlFor="lastMileCost">Custo (Last Mile)</Label>
+                                                        <Input
+                                                            id="lastMileCost"
+                                                            type="number"
+                                                            placeholder="R$ 0,00"
+                                                            value={lastMileCost}
+                                                            onChange={(e) => setLastMileCost(Number(e.target.value))}
+                                                            className="bg-slate-700 border-slate-600"
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                <div className="flex items-center space-x-2 pt-2">
+                                                    <Checkbox
+                                                        id="hasPartnerIndicator"
+                                                        checked={hasPartnerIndicator}
+                                                        onCheckedChange={(checked) => setHasPartnerIndicator(!!checked)}
+                                                        className="border-white"
+                                                    />
+                                                    <label htmlFor="hasPartnerIndicator" className="text-sm font-medium leading-none">
+                                                        PARCEIRO INDICADOR
                                                     </label>
                                                 </div>
 
@@ -826,6 +937,19 @@ const DoubleRadioFibraCalculator: React.FC<DoubleRadioFibraCalculatorProps> = ({
                                     </CardContent>
                                 </Card>
                             </TabsContent>
+
+                            {userRole === 'admin' && (
+                                <TabsContent value="dre">
+                                    <DREComponent
+                                        monthlyRevenue={totalMonthly}
+                                        setupRevenue={totalSetup}
+                                        contractPeriod={contractTerm}
+                                    projectCost={projectValue}
+                                    installationRate={5000}
+                                    hasPartnerIndicator={hasPartnerIndicator}
+                                />
+                                </TabsContent>
+                            )}
                         </Tabs>
                     </>
                 )}

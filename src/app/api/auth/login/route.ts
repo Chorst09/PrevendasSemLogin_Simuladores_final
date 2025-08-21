@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     // Buscar usuário no banco
     const result = await pool.query(
-      'SELECT id, email, password_hash, name, role, is_active FROM users WHERE email = $1',
+      'SELECT id, email, password_hash, name, role, is_active, password_change_required FROM users WHERE email = $1',
       [email]
     );
 
@@ -44,11 +44,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Gerar token
+    // Gerar token com informações adicionais
     const token = await generateToken({
       userId: user.id,
       email: user.email,
       role: user.role,
+      password_change_required: user.password_change_required || false
     });
 
     // Resposta com token
@@ -59,8 +60,10 @@ export async function POST(request: NextRequest) {
         email: user.email,
         name: user.name,
         role: user.role,
+        password_change_required: user.password_change_required
       },
       token,
+      requiresPasswordChange: user.password_change_required,
     });
 
     // Definir cookie httpOnly

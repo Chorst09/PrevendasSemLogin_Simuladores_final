@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
     // Buscar dados atualizados do usuário
     const result = await pool.query(
-      'SELECT id, email, name, role, is_active, created_at FROM users WHERE id = $1',
+      'SELECT id, email, name, role, is_active, created_at, password_change_required FROM users WHERE id = $1',
       [userId]
     );
 
@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
         name: user.name,
         role: user.role,
         created_at: user.created_at,
+        password_change_required: user.password_change_required,
       },
     });
   } catch (error) {

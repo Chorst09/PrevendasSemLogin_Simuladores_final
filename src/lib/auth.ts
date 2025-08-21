@@ -10,14 +10,16 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'diretor';
   is_active: boolean;
 }
 
 export interface JWTPayload {
   userId: string;
   email: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'diretor';
+  password_change_required?: boolean;
+  [key: string]: unknown; // Add index signature to fix type compatibility
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -28,8 +30,15 @@ export async function verifyPassword(password: string, hashedPassword: string): 
   return bcrypt.compare(password, hashedPassword);
 }
 
-export async function generateToken(payload: JWTPayload): Promise<string> {
-  return new jose.SignJWT(payload)
+export async function generateToken(payload: JWTPayload & { password_change_required?: boolean }): Promise<string> {
+  const tokenPayload = {
+    userId: payload.userId,
+    email: payload.email,
+    role: payload.role,
+    password_change_required: payload.password_change_required || false
+  };
+  
+  return new jose.SignJWT(tokenPayload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')
@@ -56,7 +65,7 @@ export function getTokenFromRequest(request: NextRequest): string | null {
   return token || null;
 }
 
-export function requireAuth(allowedRoles: ('admin' | 'user')[] = ['admin', 'user']) {
+export function requireAuth(allowedRoles: ('admin' | 'user' | 'diretor')[] = ['admin', 'user', 'diretor']) {
   return async (request: NextRequest) => {
     const token = getTokenFromRequest(request);
     if (!token) {

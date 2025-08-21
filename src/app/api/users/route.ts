@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       params.push(`%${search}%`);
     }
 
-    if (role && ['admin', 'user'].includes(role)) {
+    if (role && ['admin', 'user', 'diretor'].includes(role)) {
       whereConditions.push('role = $' + (params.length + 1));
       params.push(role);
     }

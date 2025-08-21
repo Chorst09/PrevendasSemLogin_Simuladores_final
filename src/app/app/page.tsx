@@ -25,6 +25,7 @@ import MaquinasVirtuaisCalculator from '@/components/calculators/MaquinasVirtuai
 import FiberLinkCalculator from '@/components/calculators/FiberLinkCalculator';
 import RadioInternetCalculator from '@/components/calculators/RadioInternetCalculator';
 import DoubleRadioFibraCalculator from '@/components/calculators/DoubleRadioFibraCalculator';
+import ReportsView from '@/components/reports/ReportsView';
 
 // Importe dados e tipos
 import type { NavItem } from '@/lib/types';
@@ -38,7 +39,7 @@ export default function AppPage() {
     const [mounted, setMounted] = useState(false);
     const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('dashboard');
+    const [activeTab, setActiveTab] = useState('calculator-pabx-sip');
 
     // Verificar autenticação
     useEffect(() => {
@@ -74,9 +75,16 @@ export default function AppPage() {
     };
 
     // Definição dos Itens de Navegação
-    const navItems: NavItem[] = useMemo(() => [
-        { id: 'dashboard', label: 'Dashboard', icon: <BarChart size={20} /> },
-        {
+    const navItems: NavItem[] = useMemo(() => {
+        const baseItems: NavItem[] = [];
+        
+        // Apenas admin tem acesso ao dashboard
+        if (user?.role === 'admin') {
+            baseItems.push({ id: 'dashboard', label: 'Dashboard', icon: <BarChart size={20} /> });
+        }
+        
+        // Todos os usuários têm acesso à precificação
+        baseItems.push({
             id: 'pricing',
             label: 'Precificação',
             icon: <Calculator size={20} />,
@@ -87,16 +95,55 @@ export default function AppPage() {
                 { id: 'calculator-radio-internet', label: 'Internet via Rádio', icon: <Radio size={16} /> },
                 { id: 'calculator-double-radio-fibra', label: 'Double-Radio+Fibra', icon: <Radio size={16} /> },
             ]
-        },
-        { id: 'it-assessment', label: 'Assessment de TI', icon: <CheckSquare size={20} /> },
-        { id: 'poc', label: 'Provas de Conceito POC', icon: <BarChart3 size={20} /> },
-        { 
-          id: 'site-survey', 
-          label: 'Site Survey', 
-          icon: <ClipboardList size={20} />,
-          href: '/site-survey'
-        },
-    ], []);
+        });
+
+        // Adiciona menu Ferramentas para admin e diretor
+        if (user?.role === 'admin' || user?.role === 'diretor') {
+            baseItems.push({
+                id: 'tools',
+                label: 'Ferramentas',
+                icon: <Wrench size={20} />,
+                subItems: [
+                    { id: 'it-assessment', label: 'Assessment de TI', icon: <CheckSquare size={16} /> },
+                    { id: 'poc', label: 'Provas de Conceito POC', icon: <BarChart3 size={16} /> },
+                    { 
+                        id: 'site-survey', 
+                        label: 'Site Survey', 
+                        icon: <ClipboardList size={16} />,
+                        href: '/site-survey'
+                    }
+                ]
+            });
+        }
+        
+        // Adiciona Ferramentas para usuários comuns também
+        if (user?.role === 'user') {
+            baseItems.push({
+                id: 'tools',
+                label: 'Ferramentas',
+                icon: <Wrench size={20} />,
+                subItems: [
+                    { id: 'it-assessment', label: 'Assessment de TI', icon: <CheckSquare size={16} /> },
+                    { id: 'poc', label: 'Provas de Conceito POC', icon: <BarChart3 size={16} /> },
+                    { 
+                        id: 'site-survey', 
+                        label: 'Site Survey', 
+                        icon: <ClipboardList size={16} />,
+                        href: '/site-survey'
+                    }
+                ]
+            });
+        }
+        
+        // Adiciona relatórios apenas para diretor
+        if (user?.role === 'diretor') {
+            baseItems.push(
+                { id: 'reports', label: 'Relatórios', icon: <FileText size={20} /> }
+            );
+        }
+
+        return baseItems;
+    }, [user?.role]);
 
     // Lógica para encontrar o item de navegação atual
     const currentNavItem = useMemo(() => {
@@ -119,9 +166,67 @@ export default function AppPage() {
             return <Loader2 className="h-8 w-8 animate-spin mx-auto mt-10" />;
         }
 
+        // Verifica se o usuário tem permissão para acessar a aba atual
+        const canAccessTab = () => {
+            // Usuários admin podem acessar todas as abas
+            if (user.role === 'admin') return true;
+            
+            // Usuários diretor podem acessar calculadoras, ferramentas e relatórios (sem dashboard)
+            if (user.role === 'diretor') {
+                const allowedTabs = [
+                    'calculator-pabx-sip',
+                    'calculator-maquinas-virtuais',
+                    'calculator-fiber-link',
+                    'calculator-radio-internet',
+                    'calculator-double-radio-fibra',
+                    'it-assessment',
+                    'poc',
+                    'site-survey',
+                    'reports'
+                ];
+                return allowedTabs.includes(activeTab);
+            }
+            
+            // Usuários comuns podem acessar apenas calculadoras e ferramentas (sem dashboard)
+            if (user.role === 'user') {
+                const allowedTabs = [
+                    'calculator-pabx-sip',
+                    'calculator-maquinas-virtuais',
+                    'calculator-fiber-link',
+                    'calculator-radio-internet',
+                    'calculator-double-radio-fibra',
+                    'it-assessment',
+                    'poc',
+                    'site-survey'
+                ];
+                return allowedTabs.includes(activeTab);
+            }
+            
+            return false;
+        };
+
+        if (!canAccessTab()) {
+            return (
+                <div className="flex flex-col items-center justify-center h-64">
+                    <h2 className="text-xl font-bold mb-2">Acesso não autorizado</h2>
+                    <p className="text-muted-foreground mb-4">Você não tem permissão para acessar esta página.</p>
+                    <Button onClick={handleBackToPanel}>
+                        Voltar para o Painel
+                    </Button>
+                </div>
+            );
+        }
+
         switch (activeTab) {
             case 'dashboard': 
-                return <DashboardView userId={user.id} />;
+                // Apenas admin pode acessar o dashboard completo
+                if (user.role === 'admin') {
+                    return <DashboardView userId={user.id} />;
+                } else {
+                    // Redireciona usuários e diretores para primeira calculadora
+                    setActiveTab('calculator-pabx-sip');
+                    return null;
+                }
             case 'calculator-pabx-sip': 
                 return <PABXSIPCalculator userRole={user?.role} onBackToPanel={handleBackToPanel} userId={user.id} userEmail={user.email} userName={user.name} />;
             case 'calculator-maquinas-virtuais': 
@@ -136,8 +241,22 @@ export default function AppPage() {
                 return <iframe src="/it-assessment.html" className="w-full h-screen border-0" title="Assessment de TI" />;
             case 'poc': 
                 return <iframe src="/poc-management.html" className="w-full h-screen border-0" title="Provas de Conceito POC" />;
+            case 'reports':
+                // Apenas diretor e admin podem acessar relatórios
+                if (user.role === 'diretor' || user.role === 'admin') {
+                    return <ReportsView />;
+                } else {
+                    return (
+                        <div className="flex flex-col items-center justify-center h-64">
+                            <h2 className="text-xl font-bold mb-2">Acesso não autorizado</h2>
+                            <p className="text-muted-foreground mb-4">Você não tem permissão para acessar relatórios.</p>
+                        </div>
+                    );
+                }
             default: 
-                return <DashboardView userId={user.id} />;
+                // Redireciona para primeira calculadora por padrão
+                setActiveTab('calculator-pabx-sip');
+                return null;
         }
     };
 
