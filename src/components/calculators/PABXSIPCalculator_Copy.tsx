@@ -565,13 +565,32 @@ const PABXSIPCalculatorCopy: React.FC = () => {
     const totalSetup = addedProducts.reduce((sum, p) => sum + p.setup, 0);
     const totalMonthly = addedProducts.reduce((sum, p) => sum + p.monthly, 0);
 
+    // Contador para garantir IDs sequenciais
+    const [proposalCounter, setProposalCounter] = useState(() => {
+        // Tenta carregar o contador do localStorage, ou inicia em 1
+        if (typeof window !== 'undefined') {
+            const savedCounter = localStorage.getItem('pabxProposalCounter');
+            return savedCounter ? parseInt(savedCounter, 10) : 1;
+        }
+        return 1;
+    });
+
+    // Atualiza o contador no localStorage sempre que ele mudar
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('pabxProposalCounter', proposalCounter.toString());
+        }
+    }, [proposalCounter]);
+
     const generateProposalId = (): string => {
         const now = new Date();
-        const year = now.getFullYear().toString().slice(-2);
-        const month = (now.getMonth() + 1).toString().padStart(2, '0');
-        const day = now.getDate().toString().padStart(2, '0');
-        const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-        return `PROP-${year}${month}${day}-${random}`;
+        const year = now.getFullYear().toString();
+        // Formata o contador com 4 dígitos preenchidos com zeros à esquerda
+        const counter = proposalCounter.toString().padStart(4, '0');
+        // Incrementa o contador para a próxima proposta
+        const nextCounter = proposalCounter + 1;
+        setProposalCounter(nextCounter);
+        return `prop_PABX/SIP_${counter}/${year}`;
     };
 
     const clearForm = () => {

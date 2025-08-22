@@ -44,12 +44,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Gerar token com informações adicionais
+    // Gerar token com informações do usuário
     const token = await generateToken({
       userId: user.id,
       email: user.email,
-      role: user.role,
-      password_change_required: user.password_change_required || false
+      role: user.role
     });
 
     // Resposta com token
@@ -59,11 +58,9 @@ export async function POST(request: NextRequest) {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role,
-        password_change_required: user.password_change_required
+        role: user.role
       },
       token,
-      requiresPasswordChange: user.password_change_required,
     });
 
     // Definir cookie httpOnly

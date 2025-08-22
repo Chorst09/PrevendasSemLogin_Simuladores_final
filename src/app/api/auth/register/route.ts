@@ -51,16 +51,13 @@ export async function POST(request: NextRequest) {
 
     // Hash da senha
     const passwordHash = await hashPassword(password);
-
-    // Set password_change_required to true for 'diretor' and 'user' roles
-    const passwordChangeRequired = ['diretor', 'user'].includes(role);
     
     // Inserir novo usuário
     const result = await pool.query(
-      `INSERT INTO users (email, password_hash, name, role, password_change_required) 
-       VALUES ($1, $2, $3, $4, $5) 
-       RETURNING id, email, name, role, created_at, password_change_required`,
-      [email, passwordHash, name, role, passwordChangeRequired]
+      `INSERT INTO users (email, password_hash, name, role) 
+       VALUES ($1, $2, $3, $4) 
+       RETURNING id, email, name, role, created_at`,
+      [email, passwordHash, name, role]
     );
 
     const newUser = result.rows[0];

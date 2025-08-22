@@ -181,6 +181,18 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
     };
     const generateUniqueId = () => `_${Math.random().toString(36).substr(2, 9)}`;
 
+    const generateProposalNumber = (): string => {
+        const currentYear = new Date().getFullYear();
+        const storageKey = `radioProposalCounter_${currentYear}`;
+        
+        let nextNumber = parseInt(localStorage.getItem(storageKey) || '1', 10);
+        const formattedNumber = nextNumber.toString().padStart(4, '0');
+        
+        localStorage.setItem(storageKey, (nextNumber + 1).toString());
+        
+        return `Prop_InterRadio_${formattedNumber}/${currentYear}`;
+    };
+
     // Gerenciamento de produtos
     const handleAddProduct = () => {
         if (result) {
@@ -274,6 +286,7 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
 
         const proposalToSave = {
             id: currentProposal?.id || generateUniqueId(),
+            proposalNumber: currentProposal?.proposalNumber || generateProposalNumber(),
             client: clientData,
             accountManager: accountManagerData,
             products: addedProducts,
@@ -326,7 +339,8 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
 
     const filteredProposals = (proposals || []).filter(p =>
         ((p.client?.name || p.clientData?.name || '').toLowerCase()).includes(searchTerm.toLowerCase()) ||
-        (p.id?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+        (p.id?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (p.proposalNumber?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     );
 
     const handlePrint = () => window.print();
@@ -397,7 +411,7 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
                             <div className="flex gap-4 mb-4">
                                 <Input
                                     type="text"
-                                    placeholder="Buscar por cliente ou ID..."
+                                    placeholder="Buscar por cliente, ID ou número da proposta..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="bg-slate-800 border-slate-700 text-white"
@@ -410,7 +424,7 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="border-slate-700">
-                                            <TableHead className="text-white">ID</TableHead>
+                                            <TableHead className="text-white">Número da Proposta</TableHead>
                                             <TableHead className="text-white">Cliente</TableHead>
                                             <TableHead className="text-white">Data</TableHead>
                                             <TableHead className="text-white">Total Mensal</TableHead>
@@ -418,20 +432,20 @@ const RadioInternetCalculator: React.FC<RadioInternetCalculatorProps> = ({ userR
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {filteredProposals.map(p => (
-                                            <TableRow key={p.id} className="border-slate-800">
-                                                <TableCell>{p.id}</TableCell>
-                                                <TableCell>{p.client?.name || p.clientData?.name || 'N/D'}</TableCell>
-                                                <TableCell>{new Date(p.createdAt).toLocaleDateString('pt-BR')}</TableCell>
-                                                <TableCell>{formatCurrency(p.totalMonthly)}</TableCell>
-                                                <TableCell>
-                                                    <Button variant="outline" size="sm" onClick={() => editProposal(p)}>
-                                                        <Edit className="h-4 w-4" />
-                                                    </Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
+                                          {filteredProposals.map((p, index) => (
+                                             <TableRow key={p.id || `proposal-${index}`} className="border-slate-800">
+                                                 <TableCell>{p.proposalNumber || p.id}</TableCell>
+                                                 <TableCell>{p.client?.name || p.clientData?.name || 'N/D'}</TableCell>
+                                                 <TableCell>{new Date(p.createdAt).toLocaleDateString('pt-BR')}</TableCell>
+                                                 <TableCell>{formatCurrency(p.totalMonthly)}</TableCell>
+                                                 <TableCell>
+                                                     <Button variant="outline" size="sm" onClick={() => editProposal(p)}>
+                                                         <Edit className="h-4 w-4" />
+                                                     </Button>
+                                                 </TableCell>
+                                             </TableRow>
+                                          ))}
+                                      </TableBody>
                                 </Table>
                             </div>
                         </CardContent>

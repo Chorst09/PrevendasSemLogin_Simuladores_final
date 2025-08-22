@@ -4,7 +4,7 @@ import { requireAuth } from '@/lib/auth';
 import { Proposal } from '@/types';
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireAuth(['admin', 'user'])(request);
+  const authResult = await requireAuth(['admin', 'user', 'diretor'])(request);
   if ('error' in authResult) {
     return NextResponse.json({ error: authResult.error }, { status: authResult.status });
   }
@@ -12,15 +12,28 @@ export async function GET(request: NextRequest) {
   const { user } = authResult;
 
   try {
-    let query;
-    let values;
+    const searchParams = request.nextUrl.searchParams;
+    const type = searchParams.get('type');
+    
+    let query: string;
+    let values: any[];
 
     if (user.role === 'admin') {
-      query = 'SELECT p.*, u.email as user_email FROM proposals p JOIN users u ON p.user_id = u.id ORDER BY p.created_at DESC';
-      values = [];
+      if (type) {
+        query = 'SELECT p.*, u.email as user_email FROM proposals p JOIN users u ON p.user_id = u.id WHERE p.type = $1 ORDER BY p.created_at DESC';
+        values = [type];
+      } else {
+        query = 'SELECT p.*, u.email as user_email FROM proposals p JOIN users u ON p.user_id = u.id ORDER BY p.created_at DESC';
+        values = [];
+      }
     } else {
-      query = 'SELECT p.*, u.email as user_email FROM proposals p JOIN users u ON p.user_id = u.id WHERE p.user_id = $1 ORDER BY p.created_at DESC';
-      values = [user.userId];
+      if (type) {
+        query = 'SELECT p.*, u.email as user_email FROM proposals p JOIN users u ON p.user_id = u.id WHERE p.user_id = $1 AND p.type = $2 ORDER BY p.created_at DESC';
+        values = [user.userId, type];
+      } else {
+        query = 'SELECT p.*, u.email as user_email FROM proposals p JOIN users u ON p.user_id = u.id WHERE p.user_id = $1 ORDER BY p.created_at DESC';
+        values = [user.userId];
+      }
     }
 
     const result = await pool.query(query, values);
@@ -35,6 +48,7 @@ export async function GET(request: NextRequest) {
       createdAt: new Date(row.created_at).toISOString(),
       status: row.status,
       type: row.type,
+      proposalNumber: row.proposal_number,
       userId: row.user_id,
       userEmail: row.user_email,
     }));
@@ -47,7 +61,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authResult = await requireAuth(['admin', 'user'])(request);
+  const authResult = await requireAuth(['admin', 'user', 'diretor'])(request);
   if ('error' in authResult) {
     return NextResponse.json({ error: authResult.error }, { status: authResult.status });
   }
@@ -55,15 +69,22 @@ export async function POST(request: NextRequest) {
   const { user } = authResult;
 
   try {
-    const proposalData: Proposal = await request.json();
+        const proposalData = await request.json();
 
-    if (!proposalData.id || !proposalData.client || !proposalData.products) {
-        return NextResponse.json({ error: 'Dados da proposta inválidos' }, { status: 400 });
-    }
+        console.log('Dados recebidos no backend:', JSON.stringify(proposalData, null, 2));
+
+        if (!proposalData.id || !proposalData.client || !proposalData.products) {
+            console.error('Campos obrigatórios faltando:', { 
+                hasId: !!proposalData.id, 
+                hasClient: !!proposalData.client, 
+                hasProducts: !!proposalData.products 
+            });
+            return NextResponse.json({ error: 'Dados da proposta inválidos - campos obrigatórios faltando' }, { status: 400 });
+        }
 
     const query = `
-      INSERT INTO proposals (id, user_id, client_data, account_manager_data, products, total_setup, total_monthly, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO proposals (id, user_id, client_data, account_manager_data, products, total_setup, total_monthly, created_at, type, proposal_number, status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       ON CONFLICT (id) DO UPDATE SET
         user_id = EXCLUDED.user_id,
         client_data = EXCLUDED.client_data,
@@ -71,6 +92,9 @@ export async function POST(request: NextRequest) {
         products = EXCLUDED.products,
         total_setup = EXCLUDED.total_setup,
         total_monthly = EXCLUDED.total_monthly,
+        type = EXCLUDED.type,
+        proposal_number = EXCLUDED.proposal_number,
+        status = EXCLUDED.status,
         updated_at = CURRENT_TIMESTAMP;
     `;
 
@@ -83,6 +107,9 @@ export async function POST(request: NextRequest) {
       proposalData.totalSetup,
       proposalData.totalMonthly,
       new Date(proposalData.createdAt),
+      proposalData.type || 'GENERAL',
+      proposalData.proposalNumber || null,
+      proposalData.status || 'pending',
     ];
 
     await pool.query(query, values);

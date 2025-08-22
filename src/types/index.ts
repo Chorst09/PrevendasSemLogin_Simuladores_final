@@ -35,6 +35,7 @@ export interface Proposal {
     createdAt: string;
     status?: string;
     type?: string;
+    proposalNumber?: string;
     userId: string;
     userEmail: string;
 }

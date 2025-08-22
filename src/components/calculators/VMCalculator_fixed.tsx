@@ -209,7 +209,7 @@ const VMCalculator: React.FC<VMCalculatorProps> = ({ onSave, onCancel, proposalT
     );
     const nextNumber = existingProposalsThisYear.length + 1;
     const year = new Date().getFullYear();
-    return `${nextNumber.toString().padStart(4, '0')}/${year}`;
+    return `Prop_MV_${nextNumber.toString().padStart(4, '0')}/${year}`;
   };
 
   // Função para calcular preço de uma VM
@@ -233,6 +233,30 @@ const VMCalculator: React.FC<VMCalculatorProps> = ({ onSave, onCancel, proposalT
       return total + (calculateVMPrice(vm) * vm.quantity);
     }, 0);
   }, [currentProposal.vms, pricingConfig]);
+
+  // Buscar propostas da API
+  useEffect(() => {
+    const fetchProposals = async () => {
+      try {
+        const token = localStorage.getItem('auth-token');
+        const response = await fetch('/api/proposals?type=VM', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setProposals(data);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar propostas:', error);
+      }
+    };
+
+    fetchProposals();
+  }, []);
 
   // Filtrar propostas
   const filteredProposals = proposals.filter(proposal =>
@@ -286,7 +310,7 @@ const VMCalculator: React.FC<VMCalculatorProps> = ({ onSave, onCancel, proposalT
     }
   };
 
-  const saveProposal = () => {
+  const saveProposal = async () => {
     if (!currentProposal.clientName || !currentProposal.name) {
       alert('Por favor, preencha o nome do cliente e o nome da proposta.');
       return;
@@ -298,34 +322,69 @@ const VMCalculator: React.FC<VMCalculatorProps> = ({ onSave, onCancel, proposalT
     }
 
     const proposal: Proposal = {
-      ...currentProposal,
       id: currentProposal.id || `proposal-${Date.now()}`,
       proposalNumber: currentProposal.proposalNumber || generateProposalNumber(),
-      totalPrice: calculateTotalPrice
+      clientName: currentProposal.clientName || '',
+      name: currentProposal.name || '',
+      date: new Date().toISOString(),
+      vms: currentProposal.vms,
+      totalPrice: calculateTotalPrice,
+      negotiationRounds: currentProposal.negotiationRounds || [],
+      currentRound: currentProposal.currentRound || 0
     };
 
-    if (viewMode === 'create') {
-      setProposals(prev => [...prev, proposal]);
-    } else if (viewMode === 'edit') {
-      setProposals(prev => prev.map(p => p.id === proposal.id ? proposal : p));
+    try {
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch('/api/proposals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify(proposal),
+      });
+
+      if (response.ok) {
+        const savedProposal = await response.json();
+        
+        // Recarregar propostas
+        const fetchResponse = await fetch('/api/proposals?type=VM', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
+        if (fetchResponse.ok) {
+          const data = await fetchResponse.json();
+          setProposals(data);
+        }
+
+        // Reset form and go back to search view
+        setCurrentProposal({
+          id: '',
+          proposalNumber: '',
+          name: '',
+          clientName: '',
+          date: new Date().toISOString(),
+          vms: [],
+          totalPrice: 0,
+          negotiationRounds: [],
+          currentRound: 0
+        });
+        setActiveTab('config');
+        setViewMode('search');
+
+        alert('Proposta salva com sucesso!');
+      } else {
+        const errorData = await response.json();
+        alert(`Erro ao salvar proposta: ${errorData.error || 'Erro desconhecido'}`);
+      }
+    } catch (error) {
+      console.error('Erro ao salvar proposta:', error);
+      alert('Erro ao salvar proposta. Tente novamente.');
     }
-
-    // Reset form and go back to search view
-    setCurrentProposal({
-      id: '',
-      proposalNumber: '',
-      name: '',
-      clientName: '',
-      date: new Date().toISOString(),
-      vms: [],
-      totalPrice: 0,
-      negotiationRounds: [],
-      currentRound: 0
-    });
-    setActiveTab('config');
-    setViewMode('search');
-
-    alert('Proposta salva com sucesso!');
   };
 
   const addVMToProposal = () => {

@@ -352,43 +352,93 @@ const PABXSIPCalculator: React.FC<PABXSIPCalculatorProps> = ({ userRole, onBackT
             return;
         }
 
-        const proposalToSave = {
-            id: `prop_${Date.now()}`,
-            client: clientData,
-            accountManager: accountManagerData,
-            products: proposalItems.map(item => ({ ...item, id: `PROD-${Date.now()}-${Math.random()}`, quantity: 1})),
-            totalSetup: totalSetup,
-            totalMonthly: totalMonthly,
-            contractPeriod: contractPeriod,
-            partnerIndicator: hasPartnerIndicator,
-            status: 'Pendente',
-            type: 'PABX_SIP',
-            createdAt: new Date().toISOString(),
-            userId: userId,
-            userEmail: userEmail || '',
-        };
-
-        // Lógica de salvamento via API
         try {
+            // Gera o ID da proposta no formato correto
+            const now = new Date();
+            const year = now.getFullYear().toString();
+            // Obtém o próximo número sequencial do localStorage ou inicia em 1
+            const nextProposalNumber = localStorage.getItem('pabxProposalCounter') 
+                ? parseInt(localStorage.getItem('pabxProposalCounter') || '1', 10) 
+                : 1;
+            
+            // Formata o número com 4 dígitos
+            const formattedNumber = nextProposalNumber.toString().padStart(4, '0');
+            const proposalId = `prop_PABX/SIP_${formattedNumber}/${year}`;
+            
+            // Atualiza o contador para a próxima proposta
+            localStorage.setItem('pabxProposalCounter', (nextProposalNumber + 1).toString());
+
+            const proposalToSave = {
+                id: proposalId,
+                client: clientData,
+                accountManager: accountManagerData,
+                products: proposalItems.map(item => ({
+                    ...item, 
+                    id: `PROD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                    quantity: 1
+                })),
+                totalSetup: totalSetup,
+                totalMonthly: totalMonthly,
+                contractPeriod: contractPeriod,
+                status: 'Pendente',
+                type: 'PABX_SIP',
+                createdAt: new Date().toISOString(),
+                userId: userId,
+                userEmail: userEmail || '',
+            };
+
+            // Lógica de salvamento via API
+            const storedToken = localStorage.getItem('auth-token') || token;
+            
+            if (!storedToken) {
+                throw new Error('Token de autenticação não encontrado. Faça login novamente.');
+            }
+            
+            // Preparar dados no formato esperado pelo backend
+            const backendData = {
+                id: proposalId,
+                client: clientData,
+                accountManager: accountManagerData,
+                products: proposalItems.map(item => ({
+                    ...item, 
+                    id: `PROD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                    quantity: 1
+                })),
+                totalSetup: Number(totalSetup),
+                totalMonthly: Number(totalMonthly),
+                createdAt: new Date().toISOString(),
+                type: 'PABX_SIP',
+                proposalNumber: `PABX-${Date.now().toString().slice(-8)}`,
+                status: 'pending'
+            };
+            
+            console.log('Token sendo enviado:', storedToken);
+            console.log('Dados enviados:', backendData);
+            console.log('URL da API:', '/api/proposals');
+            
             const response = await fetch('/api/proposals', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
+                    'Authorization': `Bearer ${storedToken}`,
                 },
                 credentials: 'include',
-                body: JSON.stringify(proposalToSave),
+                body: JSON.stringify(backendData),
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                alert('Proposta salva com sucesso!');
-                // Recarregar lista de propostas após salvar
-                setCurrentView('search');
-            } else {
-                console.warn('Falha ao salvar proposta:', response.status);
-                alert('Erro ao salvar proposta. Tente novamente.');
+            if (response.status === 401) {
+                localStorage.removeItem('auth-token');
+                throw new Error('Token inválido ou expirado. Faça login novamente.');
             }
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Erro ${response.status}: ${errorText}`);
+            }
+
+            const data = await response.json();
+            setSavedProposals(prevProposals => [...prevProposals, data]);
+            alert('Proposta salva com sucesso!');
         } catch (error) {
             console.warn('Erro ao salvar proposta:', error);
             alert(`Erro ao salvar proposta: ${error instanceof Error ? error.message : 'Serviço temporariamente indisponível'}`);
@@ -398,45 +448,51 @@ const PABXSIPCalculator: React.FC<PABXSIPCalculatorProps> = ({ userRole, onBackT
     // Carregar propostas da API
     useEffect(() => {
         const fetchProposals = async () => {
-            if (!token) {
+            const storedToken = localStorage.getItem('auth-token') || token;
+            
+            if (!storedToken) {
+                console.warn('Token não encontrado no localStorage ou via useAuth');
                 setSavedProposals([]);
                 return;
             }
+            
+            console.log('Usando token:', storedToken.substring(0, 20) + '...');
             
             try {
                 const response = await fetch('/api/proposals?type=PABX_SIP', {
                     method: 'GET',
                     headers: {
-                        'Authorization': `Bearer ${token}`,
+                        'Authorization': `Bearer ${storedToken}`,
                         'Content-Type': 'application/json',
                     },
                     credentials: 'include',
                 });
                 
+                console.log('Resposta da API:', response.status, response.statusText);
+                
                 if (response.ok) {
                     const data = await response.json();
                     setSavedProposals(Array.isArray(data) ? data : []);
-                } else if (response.status === 403) {
-                    // Erro de permissão - usuário pode não ter acesso
-                    console.info('Acesso negado às propostas. Usuário pode não ter permissões necessárias.');
+                } else if (response.status === 401) {
+                    console.warn('Token inválido ou expirado. Faça login novamente.');
+                    localStorage.removeItem('auth-token');
                     setSavedProposals([]);
-                } else if (response.status === 404) {
-                    // API não encontrada - modo offline
-                    console.info('API de propostas não disponível. Funcionando em modo offline.');
+                } else if (response.status === 403) {
+                    console.warn('Acesso negado. Verifique suas permissões.');
                     setSavedProposals([]);
                 } else {
-                    // Outros erros HTTP
                     console.warn(`Erro HTTP ${response.status} ao buscar propostas`);
                     setSavedProposals([]);
                 }
             } catch (error) {
-                // Erro de rede ou conexão
-                console.info('API de propostas indisponível. Funcionando em modo offline.');
+                console.error('Erro de rede ao buscar propostas:', error);
                 setSavedProposals([]);
             }
         };
 
-        fetchProposals();
+        if (token) {
+            fetchProposals();
+        }
     }, [token]);
 
     // Efeito para calcular a margem líquida estimada a partir do markup

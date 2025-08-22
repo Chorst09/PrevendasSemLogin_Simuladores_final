@@ -25,9 +25,9 @@ export async function POST(req: NextRequest) {
 
     console.log('Inserting new user into database...');
     const newUser = await pool.query(
-      `INSERT INTO users (name, email, password_hash, password_change_required) 
-       VALUES ($1, $2, $3, true) 
-       RETURNING id, name, email, role, created_at, password_change_required`,
+      `INSERT INTO users (name, email, password_hash) 
+       VALUES ($1, $2, $3) 
+       RETURNING id, name, email, role, created_at`,
       [name, email, passwordHash]
     );
     console.log('User created successfully:', newUser.rows[0]);

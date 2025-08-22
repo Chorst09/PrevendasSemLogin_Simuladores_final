@@ -59,10 +59,20 @@ export default function LoginForm() {
         return;
       }
 
-      // Salvar token no localStorage
+      // Salvar token no localStorage e definir cookie
       if (data.token) {
-        localStorage.setItem('auth-token', data.token);
+        const cleanToken = data.token.startsWith('Bearer ') ? data.token.substring(7) : data.token;
+        
+        // Salvar no localStorage
+        localStorage.setItem('auth-token', cleanToken);
+        
+        // Definir cookie para requisições do servidor
+        document.cookie = `auth-token=${cleanToken}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+        
         console.log('Token saved successfully');
+        
+        // Atualizar o estado de autenticação
+        window.dispatchEvent(new Event('auth-update'));
       }
 
       console.log('User data:', data.user);

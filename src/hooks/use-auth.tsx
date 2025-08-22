@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { JWTPayload } from '@/lib/auth'; // Reutilizando a interface do backend
 
@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
+  const updateAuthState = useCallback(() => {
     let storedToken = localStorage.getItem('auth-token');
     
     // If no token in localStorage, check cookies
@@ -41,7 +41,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (authCookie) {
         storedToken = authCookie.split('=')[1];
         // Sync back to localStorage
-        localStorage.setItem('auth-token', storedToken);
+        if (storedToken) {
+          localStorage.setItem('auth-token', storedToken);
+        }
       }
     }
     
@@ -50,17 +52,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (decodedUser) {
         setUser(decodedUser);
         setToken(storedToken);
+      } else {
+        // Token inválido, limpar
+        localStorage.removeItem('auth-token');
+        document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        setUser(null);
+        setToken(null);
       }
+    } else {
+      setUser(null);
+      setToken(null);
     }
     setIsLoading(false);
   }, []);
 
+  // Efeito para carregar o estado inicial
+  useEffect(() => {
+    updateAuthState();
+    
+    // Adicionar listener para eventos de atualização de autenticação
+    const handleAuthUpdate = () => {
+      updateAuthState();
+    };
+    
+    window.addEventListener('auth-update', handleAuthUpdate);
+    
+    // Limpar listener ao desmontar
+    return () => {
+      window.removeEventListener('auth-update', handleAuthUpdate);
+    };
+  }, [updateAuthState]);
+
   const login = (newToken: string) => {
-    localStorage.setItem('auth-token', newToken);
-    // Also set as cookie for server-side requests
-    document.cookie = `auth-token=${newToken}; path=/; max-age=${7 * 24 * 60 * 60}`; // 7 days
-    const decodedUser = decodeToken(newToken);
-    setToken(newToken);
+    // Remove o prefixo 'Bearer ' se existir
+    const cleanToken = newToken.startsWith('Bearer ') ? newToken.substring(7) : newToken;
+    
+    localStorage.setItem('auth-token', cleanToken);
+    // Também define como cookie para requisições do lado do servidor
+    document.cookie = `auth-token=${cleanToken}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`; // 7 dias
+    const decodedUser = decodeToken(cleanToken);
+    setToken(cleanToken);
     setUser(decodedUser);
     router.push('/admin/dashboard');
   };
