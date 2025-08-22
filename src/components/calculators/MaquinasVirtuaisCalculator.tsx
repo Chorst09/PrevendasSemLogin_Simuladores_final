@@ -299,6 +299,16 @@ const MaquinasVirtuaisCalculator: React.FC<MaquinasVirtuaisCalculatorProps> = ({
     // Funções auxiliares
     const formatCurrency = (value: number) => `R$ ${value.toFixed(2).replace('.', ',')}`;
     const generateUniqueId = () => `_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Função para gerar número da proposta automaticamente
+    const generateProposalNumber = (): string => {
+        const existingProposalsThisYear = proposals.filter(p => 
+            new Date(p.createdAt || new Date()).getFullYear() === new Date().getFullYear()
+        );
+        const nextNumber = existingProposalsThisYear.length + 1;
+        const year = new Date().getFullYear();
+        return `Prop_MV_${nextNumber.toString().padStart(4, '0')}/${year}`;
+    };
 
     // Função para adicionar VM à proposta
     const handleAddVMProduct = () => {
@@ -374,36 +384,48 @@ const MaquinasVirtuaisCalculator: React.FC<MaquinasVirtuaisCalculatorProps> = ({
             return;
         }
 
-        const proposalData: Proposal = {
+        const proposalData = {
             id: currentProposal?.id || `prop_${Date.now()}`,
             client: clientData,
             accountManager: accountManagerData,
             products: addedProducts,
-            totalSetup,
-            totalMonthly,
+            totalSetup: Number(totalSetup),
+            totalMonthly: Number(totalMonthly),
             status: 'Salva',
             type: 'VM',
+            proposalNumber: currentProposal?.proposalNumber || generateProposalNumber(),
             createdAt: currentProposal?.createdAt || new Date().toISOString(),
-            userId: currentProposal?.userId || '',
-            userEmail: currentProposal?.userEmail || '',
+            userId: userId || currentProposal?.userId || '',
+            userEmail: userEmail || currentProposal?.userEmail || '',
         };
 
         toast({ title: "Salvando...", description: "A sua proposta está sendo salva." });
 
         try {
+            if (!token) {
+                throw new Error('Usuário não autenticado. Faça login novamente.');
+            }
+            
+            console.log('Enviando dados da proposta:', JSON.stringify(proposalData, null, 2));
+            console.log('Token:', token);
+            console.log('UserId:', userId);
+            console.log('UserEmail:', userEmail);
+            
             const response = await fetch('/api/proposals', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
+                    'Authorization': `Bearer ${token}`
                 },
                 credentials: 'include',
                 body: JSON.stringify(proposalData),
             });
-
+            
+            const responseData = await response.json();
+            
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Falha ao salvar a proposta');
+                console.error('Erro na resposta da API:', responseData);
+                throw new Error(responseData.error || 'Falha ao salvar a proposta');
             }
 
             toast({ title: "Sucesso!", description: "Proposta salva com sucesso." });
@@ -437,7 +459,8 @@ const MaquinasVirtuaisCalculator: React.FC<MaquinasVirtuaisCalculatorProps> = ({
 
     const filteredProposals = proposals.filter(p =>
         (p.clientData?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-        (p.id?.toString() || '').includes(searchTerm)
+        (p.id?.toString() || '').includes(searchTerm) ||
+        (p.proposalNumber?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     );
 
     const handleSelectProposal = (proposal: Proposal) => {
@@ -478,7 +501,7 @@ const MaquinasVirtuaisCalculator: React.FC<MaquinasVirtuaisCalculatorProps> = ({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>ID</TableHead>
+                                <TableHead>Número da Proposta</TableHead>
                                 <TableHead>Cliente</TableHead>
                                 <TableHead>Data</TableHead>
                                 <TableHead>Status</TableHead>
@@ -489,7 +512,7 @@ const MaquinasVirtuaisCalculator: React.FC<MaquinasVirtuaisCalculatorProps> = ({
                         <TableBody>
                             {filteredProposals.map((proposal) => (
                                 <TableRow key={proposal.id}>
-                                    <TableCell>{proposal.id}</TableCell>
+                                    <TableCell>{proposal.proposalNumber || proposal.id}</TableCell>
                                     <TableCell>{proposal.clientData?.name}</TableCell>
                                     <TableCell>{new Date(proposal.createdAt || '').toLocaleDateString()}</TableCell>
                                     <TableCell>{proposal.status}</TableCell>
